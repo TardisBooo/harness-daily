@@ -2,7 +2,7 @@
 
 # harness-daily
 
-**One command turns yesterday's AI coding sessions into an enterprise-style daily report — written by the coding agent you already trust.**
+**One command turns yesterday's AI coding sessions into an enterprise-style daily report — written by whichever agent CLI you already use.**
 
 _Scan locally · Summarize with Grok Build · No extra API keys · Windows / macOS / Linux_
 
@@ -45,8 +45,8 @@ harness-daily does it for you:
 
 - **Scans every harness locally** — reads session/prompt logs from disk; nothing leaves your machine
   except the distilled prompts you choose to send to your own Grok Build CLI.
-- **Writes the prose with Grok Build** — the report body is composed by `grok -p` using your
-  existing login. No second API key, no new account.
+- **Writes the prose with your current agent CLI** — Grok Build, Claude Code, or Codex, using
+  the login you already have. No second API key. `init --host auto` picks the first one found.
 - **Enterprise-report format** — "today's work" grouped by project with merged work items; raw
   prompts go to an audit appendix, not the summary.
 - **Self-healing schedule** — the OS task runs `report --auto --backfill 7`, so a powered-off
@@ -56,7 +56,7 @@ harness-daily does it for you:
 08:00 (OS task) → harness-daily report
    ├─ discover roots  (codex / claude / grok / pi / omp, incl. desktop apps sharing those dirs)
    ├─ collect         (parse JSONL, dedupe, drop "continue"/"ok"/smoke-test noise)
-   ├─ write with grok (grok --prompt-file … --output-format json; your login, your default model)
+   ├─ write            grok --prompt-file / claude -p / codex exec  (your login, your default model)
    └─ render          D:/Me/工作日志/日报-YYYY-MM-DD.md   ← summary · details · issues · stats · audit log
 ```
 
@@ -64,9 +64,9 @@ harness-daily does it for you:
 
 | Piece | Responsibility |
 |---|---|
-| `harness-daily` (Rust binary) | Discover harness data dirs (junction-aware), parse session logs, aggregate prompts per project, call `grok`, render Markdown, install the OS schedule |
-| Grok Build plugin (`skills/`, `commands/`) | Lets you run `/harness-daily` inside an interactive Grok session |
-| `grok -p` (headless) | Reads the embedded collection JSON and returns a strict JSON report body |
+| `harness-daily` (Rust binary) | Discover harness data dirs, parse session logs, aggregate prompts per project, call the writer CLI, render Markdown, install the OS schedule |
+| Universal plugin (`skills/`, `commands/`, `plugin.json`, `.claude-plugin/`, `plugin.yaml`) | Same repo installs into **Grok Build**, **Claude Code**, or **Codex** |
+| Writer host | `grok --prompt-file` · `claude -p --output-format json` · `codex exec` (stdin) |
 | OS scheduler | Windows `schtasks` / macOS `launchd` / Linux cron — fires `report --auto --backfill 7` daily |
 
 Supported out of the box: **Codex CLI** (`~/.codex`), **Claude Code** (`~/.claude`), **Grok Build**
@@ -75,7 +75,7 @@ covered automatically. Moved a data dir? Point `[harnesses.<id>].data_dir` at th
 
 ## ✅ Requirements
 
-- [Grok Build](https://x.ai/cli) CLI installed and **logged in** (it provides the writing model)
+- At least one of [Grok Build](https://x.ai/cli), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), or [Codex CLI](https://github.com/openai/codex), **logged in**
 - Windows, macOS, or Linux
 - Optional: [Rust](https://rustup.rs) if you build from source
 
@@ -103,21 +103,34 @@ git clone https://github.com/TardisBooo/harness-daily
 cd harness-daily && cargo install --path .
 ```
 
-### 2. Install the Grok plugin
+### 2. Install the plugin into the CLI you use
+
+Same repository, three hosts:
 
 ```sh
-grok plugin install TardisBooo/harness-daily --trust
+grok plugin install TardisBooo/harness-daily --trust     # Grok Build
+claude plugin install TardisBooo/harness-daily           # Claude Code (marketplace / local path)
+codex plugin install TardisBooo/harness-daily            # Codex (if your Codex build supports git/local sources)
 ```
 
-This adds the `/harness-daily` slash command to interactive Grok sessions.
+This adds `/harness-daily` (or the equivalent skill) inside that CLI. Daily generation still
+runs from the OS scheduler + the `harness-daily` binary, not from a live chat window.
 
 ## 🚀 Quick start
 
 ```sh
-harness-daily init --host grok --out "D:/Me/工作日志"   # detect harnesses, write config
-harness-daily doctor                                    # verify grok login + paths
-harness-daily report                                    # write yesterday's report now
-harness-daily schedule install --time 08:00             # daily at 08:00, self-backfilling
+harness-daily init --host auto --out "D:/Me/工作日志"   # grok → claude → codex
+harness-daily doctor
+harness-daily report
+harness-daily schedule install --time 08:00
+```
+
+Force a writer:
+
+```sh
+harness-daily init --host grok
+harness-daily init --host claude
+harness-daily init --host codex
 ```
 
 Generate a specific day or catch up a week:
@@ -130,7 +143,7 @@ harness-daily report --backfill 7 --auto
 ## 🎛 Commands
 
 ```
-harness-daily init --host grok [--out DIR] [--time 08:00]   write config + install binary locally
+harness-daily init --host auto|grok|claude|codex [--out DIR] [--time 08:00]
 harness-daily scan                                          list detected harness data roots
 harness-daily doctor                                        self-check grok login, paths, output dir
 harness-daily report [--date D] [--backfill N] [--auto]
@@ -153,8 +166,8 @@ backfill_days = 7
 extra_roots = []            # extra scan roots (moved data dirs)
 
 [writer]
-host = "grok"               # the CLI that writes the report body
-bin  = 'C:\Users\you\.grok\bin\grok.exe'
+host = "auto"               # grok | claude | codex | auto
+bin  = ""                   # empty = discover; or an absolute path
 
 [report]
 include_audit_log = true    # set false to omit the raw-prompt appendix
@@ -181,8 +194,7 @@ data_dir = ""               # override if you moved ~/.codex
 - **New harness / desktop app**: copy [`adapters/example-jsonl.toml`](adapters/example-jsonl.toml)
   into your config dir and edit the paths/keys. Built-in Rust adapters live in `src/collect.rs`;
   PRs welcome (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
-- **Different writer CLI**: the pipeline is writer-agnostic by design; today only
-  `--host grok` is shipped.
+- **Writer CLI**: `--host grok|claude|codex|auto`. Collection always covers all five harnesses.
 - **Privacy**: everything is local. Only the per-project prompt digest is passed to your own
   `grok -p` process; the audit appendix can be disabled.
 

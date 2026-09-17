@@ -2,7 +2,7 @@
 
 # harness-daily
 
-**一条命令，把昨天的 AI 编码会话变成企业风格的日报 —— 由你已经在用的编码 agent 亲自写。**
+**一条命令，把昨天的 AI 编码会话变成企业风格的日报 —— 由你已经在用的那套 agent CLI 亲自写。**
 
 _本地扫描 · Grok Build 写正文 · 无需额外 API Key · Windows / macOS / Linux_
 
@@ -44,7 +44,7 @@ harness-daily 替你做：
 
 - **本地扫描所有 harness** —— 直接读会话/提问日志；除了交给「你自己的 Grok CLI」的项目摘要外，
   任何数据都不出本机。
-- **正文由 Grok Build 撰写** —— 用 `grok -p` 和你已有的登录态写日报，不需要第二个 API key。
+- **正文由当前 agent CLI 撰写** —— Grok Build、Claude Code 或 Codex，用你已有的登录态。不需要第二个 API key。`init --host auto` 按 grok → claude → codex 选用第一套能找到的。
 - **企业日报格式** —— 「今日工作」按项目合并成完整工作条目；原始提问放审计附录，不混进总结。
 - **自愈调度** —— 系统任务每天执行 `report --auto --backfill 7`，关机错过 08:00，开机自动补。
 
@@ -52,7 +52,7 @@ harness-daily 替你做：
 08:00（系统任务）→ harness-daily report
    ├─ 发现数据目录   （codex / claude / grok / pi / omp，含共用这些目录的桌面端）
    ├─ 采集           （解析 JSONL、去重、剔除「继续/ok/连通性测试」）
-   ├─ Grok 写正文    （grok --prompt-file … --output-format json；你的登录态与默认模型）
+   ├─ 写正文         grok --prompt-file / claude -p / codex exec（你的登录态与默认模型）
    └─ 渲染           D:/Me/工作日志/日报-YYYY-MM-DD.md   ← 总结 · 明细 · 问题 · 统计 · 审计
 ```
 
@@ -60,9 +60,9 @@ harness-daily 替你做：
 
 | 组件 | 职责 |
 |---|---|
-| `harness-daily`（Rust 二进制） | 发现各 harness 数据目录（识别 Windows junction）、解析会话日志、按项目聚合、调用 grok、渲染 Markdown、安装系统定时任务 |
-| Grok 插件（`skills/`、`commands/`） | 让你在交互式 Grok 会话里用 `/harness-daily` |
-| `grok -p`（无头模式） | 读内嵌采集 JSON，返回严格 JSON 正文 |
+| `harness-daily`（Rust 二进制） | 发现数据目录、解析会话、按项目聚合、调用写正文 CLI、渲染 Markdown、安装系统定时任务 |
+| 通用插件（`skills/`、`commands/`、`plugin.json`、`.claude-plugin/`、`plugin.yaml`） | 同一仓库可装进 **Grok Build / Claude Code / Codex** |
+| 写正文宿主 | `grok --prompt-file` · `claude -p --output-format json` · `codex exec`（stdin） |
 | 系统调度器 | Windows `schtasks` / macOS `launchd` / Linux cron，每天触发 `report --auto --backfill 7` |
 
 内置支持：**Codex CLI**（`~/.codex`）、**Claude Code**（`~/.claude`）、**Grok Build**
@@ -71,7 +71,7 @@ harness-daily 替你做：
 
 ## ✅ 环境要求
 
-- 已安装并**登录** [Grok Build](https://x.ai/cli)（它提供写正文的模型）
+- 至少安装并**登录** [Grok Build](https://x.ai/cli)、[Claude Code](https://docs.anthropic.com/en/docs/claude-code) 或 [Codex CLI](https://github.com/openai/codex) 之一
 - Windows / macOS / Linux
 - 可选：[Rust](https://rustup.rs)（源码构建时）
 
@@ -99,21 +99,33 @@ git clone https://github.com/TardisBooo/harness-daily
 cd harness-daily && cargo install --path .
 ```
 
-### 2. 安装 Grok 插件
+### 2. 装进你正在用的 CLI
+
+同一仓库，三家都能装：
 
 ```sh
 grok plugin install TardisBooo/harness-daily --trust
+claude plugin install TardisBooo/harness-daily
+codex plugin install TardisBooo/harness-daily
 ```
 
-装完后，交互式 Grok 会话里就有 `/harness-daily` 命令。
+会话里会有 `/harness-daily`。每天出报仍由系统定时任务 + `harness-daily` 二进制完成，不依赖聊天窗口开着。
 
 ## 🚀 快速上手
 
 ```sh
-harness-daily init --host grok --out "D:/Me/工作日志"   # 探测 harness、写配置
-harness-daily doctor                                    # 检查 grok 登录、路径
-harness-daily report                                    # 立刻生成昨天的日报
-harness-daily schedule install --time 08:00             # 每天 08:00，自动补漏
+harness-daily init --host auto --out "D:/Me/工作日志"   # grok → claude → codex
+harness-daily doctor
+harness-daily report
+harness-daily schedule install --time 08:00
+```
+
+指定写正文的 CLI：
+
+```sh
+harness-daily init --host grok
+harness-daily init --host claude
+harness-daily init --host codex
 ```
 
 指定日期或补一周：
@@ -126,7 +138,7 @@ harness-daily report --backfill 7 --auto
 ## 🎛 命令
 
 ```
-harness-daily init --host grok [--out DIR] [--time 08:00]   写配置并本地安装二进制
+harness-daily init --host auto|grok|claude|codex [--out DIR] [--time 08:00]
 harness-daily scan                                          列出探测到的数据目录
 harness-daily doctor                                        自检（grok 登录、路径、输出目录）
 harness-daily report [--date D] [--backfill N] [--auto]
@@ -148,8 +160,8 @@ backfill_days = 7
 extra_roots = []            # 额外扫描根（搬过家的数据目录）
 
 [writer]
-host = "grok"               # 写正文的 CLI
-bin  = 'C:\Users\you\.grok\bin\grok.exe'
+host = "auto"               # grok | claude | codex | auto
+bin  = ""                   # 空=自动探测；或填绝对路径
 
 [report]
 include_audit_log = true    # false 可关闭原始提问附录
@@ -176,7 +188,7 @@ data_dir = ""               # ~/.codex 搬家后在此覆盖
 - **新增 harness / 桌面端**：复制 [`adapters/example-jsonl.toml`](adapters/example-jsonl.toml)
   到配置目录改路径/字段；内置 Rust 适配器在 `src/collect.rs`，欢迎 PR（见
   [`CONTRIBUTING.md`](CONTRIBUTING.md)）。
-- **换写正文的 CLI**：流水线按可替换 writer 设计，当前发布 `--host grok`。
+- **写正文 CLI**：`--host grok|claude|codex|auto`。采集始终覆盖全部五家 harness。
 - **隐私**：全部本地。只有「项目级提问摘要」会传给你自己的 `grok -p` 进程；审计附录可关闭。
 
 ## 🛠 开发

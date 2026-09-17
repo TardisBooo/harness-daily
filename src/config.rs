@@ -86,13 +86,13 @@ fn default_backfill() -> u32 {
     7
 }
 fn default_host() -> String {
-    "grok".into()
+    "auto".into()
 }
 fn default_bin() -> String {
-    "grok".into()
+    String::new()
 }
 fn default_args() -> Vec<String> {
-    vec!["--always-approve".into()]
+    Vec::new()
 }
 fn default_true() -> bool {
     true

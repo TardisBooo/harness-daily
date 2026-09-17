@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Universal writer hosts: `--host auto|grok|claude|codex` (`grok --prompt-file`,
+  `claude -p`, `codex exec` on stdin).
+- Plugin manifests for Claude Code (`.claude-plugin/`) and Codex (`plugin.yaml`)
+  in the same repository as the Grok plugin.
+
 ## [0.1.0] — 2026-09-17
 
 ### Added

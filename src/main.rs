@@ -1,6 +1,7 @@
 mod collect;
 mod config;
 mod discovery;
+mod hosts;
 mod model;
 mod render;
 mod schedule;
@@ -30,7 +31,8 @@ struct Cli {
 enum Cmd {
     /// 写入默认配置（本机宿主为 Grok Build）
     Init {
-        #[arg(long, default_value = "grok")]
+        /// grok | claude | codex | auto（探测已安装并已登录的 CLI）
+        #[arg(long, default_value = "auto")]
         host: String,
         #[arg(long)]
         out: Option<PathBuf>,
@@ -110,17 +112,17 @@ fn run() -> Result<()> {
 }
 
 fn cmd_init(host: &str, out: Option<PathBuf>, time: &str) -> Result<()> {
-    if host != "grok" {
-        anyhow::bail!("本发行版只支持 --host grok（Grok Build）");
-    }
     let output_dir = out.unwrap_or_else(config::default_output_dir);
     ensure_dir(&output_dir)?;
     let mut cfg = Config::load_or_default(output_dir.clone());
     cfg.output_dir = output_dir;
     cfg.report_time = time.to_string();
-    cfg.writer.host = "grok".into();
-    if let Some(bin) = discovery::find_grok_bin(&cfg) {
-        cfg.writer.bin = bin.display().to_string();
+    cfg.writer.host = host.to_string();
+    let (resolved, bin) = hosts::resolve_host(&cfg)?;
+    cfg.writer.host = resolved.id().into();
+    cfg.writer.bin = bin.display().to_string();
+    if cfg.writer.args_extra.is_empty() {
+        cfg.writer.args_extra = hosts::default_extra_args(resolved);
     }
     if let Ok(installed) = install_self() {
         println!("已安装二进制 {}", installed.display());
@@ -128,7 +130,7 @@ fn cmd_init(host: &str, out: Option<PathBuf>, time: &str) -> Result<()> {
     let path = cfg.save()?;
     println!("已写入 {}", path.display());
     println!("输出目录 {}", cfg.output_dir.display());
-    println!("写正文宿主: grok ({})", cfg.writer.bin);
+    println!("写正文宿主: {} ({})", resolved.label(), cfg.writer.bin);
     cmd_scan()?;
     Ok(())
 }
@@ -169,16 +171,24 @@ fn cmd_doctor() -> Result<()> {
     println!("output     {}", cfg.output_dir.display());
     println!("timezone   {}", cfg.timezone);
     println!("report_at  {}", cfg.report_time);
-    match discovery::find_grok_bin(&cfg) {
-        Some(p) => {
-            println!("grok bin   {}", p.display());
+    match hosts::resolve_host(&cfg) {
+        Ok((host, p)) => {
+            println!("writer     {} ({})", host.label(), p.display());
             let out = Command::new(&p).arg("--version").output();
             match out {
-                Ok(o) => print!("grok ver   {}", String::from_utf8_lossy(&o.stdout)),
-                Err(e) => println!("grok run   失败: {e}"),
+                Ok(o) => {
+                    let v = String::from_utf8_lossy(&o.stdout);
+                    let v = if v.trim().is_empty() {
+                        String::from_utf8_lossy(&o.stderr).into_owned()
+                    } else {
+                        v.into_owned()
+                    };
+                    print!("bin ver    {v}");
+                }
+                Err(e) => println!("bin run    失败: {e}"),
             }
         }
-        None => println!("grok bin   未找到"),
+        Err(e) => println!("writer     未找到: {e}"),
     }
     cmd_scan()?;
     if !cfg.output_dir.exists() {
@@ -244,8 +254,7 @@ fn generate_one(cfg: &Config, date: NaiveDate, auto: bool, dry_collect: bool) ->
         return Ok(());
     }
     let work = cfg.output_dir.join(".harness-daily-work");
-    let llm =
-        writer::write_with_grok(cfg, &payload, &work).context("调用 Grok Build 写正文失败")?;
+    let llm = writer::write_report(cfg, &payload, &work).context("调用 agent CLI 写正文失败")?;
     let md = render::render(
         date,
         &payload,

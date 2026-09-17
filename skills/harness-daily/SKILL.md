@@ -8,7 +8,8 @@ argument-hint: "[--date YYYY-MM-DD] [--backfill N]"
 
 # harness-daily
 
-用本机已安装的 `harness-daily` CLI 采集各 harness 会话，再由当前 Grok 会话写正文。
+通用日报插件：采集器是独立 CLI `harness-daily`；写正文使用**当前这套 agent CLI** 的登录态
+（Grok `grok --prompt-file`、Claude `claude -p`、Codex `codex exec`）。不要另配 API key。
 
 ## 生成昨天的日报
 
@@ -28,16 +29,18 @@ harness-daily report --date YYYY-MM-DD
 harness-daily report --date YYYY-MM-DD --dry-collect
 ```
 
-## 安装与定时（用户本机）
+## 安装与定时
 
 ```bash
-harness-daily init --host grok --out "D:/Me/工作日志"
+harness-daily init --host auto --out "D:/Me/工作日志"
 harness-daily doctor
 harness-daily schedule install --time 08:00
 ```
 
+`--host auto` 按 grok → claude → codex 探测已安装的 CLI。也可显式 `--host grok|claude|codex`。
+
 ## 规则
 
-- 日报正文由 Grok 根据采集 JSON 归纳；不要另配 API key。
 - 「今日工作总结」只按项目写工作内容，不要写工具名和时间。
-- 本插件不安装到 Codex。
+- 同一项目下各 harness / session 的提问要合并。
+- 定时任务走操作系统，不依赖当前会话是否开着。

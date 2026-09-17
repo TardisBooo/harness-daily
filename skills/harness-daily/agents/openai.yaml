@@ -1,0 +1,3 @@
+interface:
+  display_name: harness-daily
+  short_description: Generate a daily work report from local AI coding harness sessions

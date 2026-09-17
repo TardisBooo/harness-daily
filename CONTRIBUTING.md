@@ -7,8 +7,8 @@ Thanks for your interest in improving harness-daily!
 - **New harness adapter** — the highest-value contribution. See below.
 - **Bug reports** — open an issue with: OS, harness versions, `harness-daily doctor` output,
   and (redacted) logs. Never paste API keys or secrets.
-- **Writer integrations** — new `--host` backends (claude/pi headless) must follow the same
-  contract: strict JSON in, non-zero exit on failure.
+- **Writer integrations** — new `--host` backends must follow the same contract:
+  strict JSON in, non-zero exit on failure. Grok / Claude / Codex are already shipped.
 
 ## Adding a harness adapter
 

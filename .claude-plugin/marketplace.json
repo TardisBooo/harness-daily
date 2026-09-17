@@ -1,0 +1,12 @@
+{
+  "name": "harness-daily",
+  "description": "Daily work reports from local AI coding harness sessions",
+  "owner": { "name": "harness-daily contributors" },
+  "plugins": [
+    {
+      "name": "harness-daily",
+      "description": "Scan Codex / Claude / Grok / Pi / OMP sessions and write a daily report",
+      "source": "./"
+    }
+  ]
+}

@@ -73,35 +73,3 @@ pub fn scan_roots(cfg: &Config) -> Vec<HarnessRoot> {
     }
     out
 }
-
-pub fn find_grok_bin(cfg: &Config) -> Option<PathBuf> {
-    let configured = PathBuf::from(&cfg.writer.bin);
-    if configured.is_absolute() && configured.exists() && !is_cmd_wrapper(&configured) {
-        return Some(configured);
-    }
-    let home = home_dir();
-    let candidates = [
-        home.join(".grok").join("bin").join("grok.exe"),
-        home.join(".grok").join("bin").join("grok"),
-        PathBuf::from(r"D:\SOFTWARE\OpenAgents\bin\grok.exe"),
-    ];
-    if let Some(p) = candidates.into_iter().find(|p| p.exists()) {
-        return Some(p);
-    }
-    if let Ok(p) = which::which(&cfg.writer.bin) {
-        if !is_cmd_wrapper(&p) {
-            return Some(p);
-        }
-    }
-    if configured.exists() {
-        return Some(configured);
-    }
-    None
-}
-
-fn is_cmd_wrapper(p: &Path) -> bool {
-    matches!(
-        p.extension().and_then(|e| e.to_str()).map(|s| s.to_ascii_lowercase()),
-        Some(ext) if ext == "cmd" || ext == "bat" || ext == "ps1"
-    )
-}

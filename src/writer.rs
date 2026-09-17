@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::discovery::find_grok_bin;
+use crate::hosts::{self, Host};
 use crate::model::{CollectPayload, LlmReport};
 use anyhow::{Context, Result};
 use std::fs;
@@ -7,39 +7,22 @@ use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-pub fn write_with_grok(
-    cfg: &Config,
-    payload: &CollectPayload,
-    work_dir: &Path,
-) -> Result<LlmReport> {
+pub fn write_report(cfg: &Config, payload: &CollectPayload, work_dir: &Path) -> Result<LlmReport> {
     fs::create_dir_all(work_dir)?;
     let collect_path = work_dir.join("collect.json");
     let prompt_path = work_dir.join("writer-prompt.md");
     fs::write(&collect_path, serde_json::to_string_pretty(payload)?)?;
     fs::write(&prompt_path, build_prompt(payload))?;
 
-    let bin = find_grok_bin(cfg).context("找不到 grok 可执行文件，请先安装并登录 Grok Build")?;
-    let mut cmd = Command::new(&bin);
-    cmd.arg("--prompt-file")
-        .arg(&prompt_path)
-        .arg("--output-format")
-        .arg("json")
-        .arg("--max-turns")
-        .arg("4")
-        .arg("--disallowed-tools")
-        .arg("run_terminal_cmd,search_replace,web_search,read_file");
-    for extra in &cfg.writer.args_extra {
-        cmd.arg(extra);
-    }
-    cmd.stdin(Stdio::null());
-    let output = cmd
-        .output()
-        .with_context(|| format!("执行 {} 失败", bin.display()))?;
+    let (host, bin) = hosts::resolve_host(cfg)?;
+    let prompt = fs::read_to_string(&prompt_path)?;
+    let output = run_host(host, &bin, &cfg.writer.args_extra, &prompt, &prompt_path)?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     if !output.status.success() {
         anyhow::bail!(
-            "grok -p 退出码 {:?} stderr={} stdout={}",
+            "{} 退出码 {:?} stderr={} stdout={}",
+            host.label(),
             output.status.code(),
             truncate_log(&stderr, 800),
             truncate_log(&stdout, 800)
@@ -48,11 +31,71 @@ pub fn write_with_grok(
     let report = parse_llm_json(&stdout).or_else(|_| extract_embedded_json(&stdout))?;
     if report.projects.is_empty() && payload.projects.iter().any(|p| !p.prompts.is_empty()) {
         anyhow::bail!(
-            "grok 返回了空 projects。stdout={}",
+            "{} 返回了空 projects。stdout={}",
+            host.label(),
             truncate_log(&stdout, 800)
         );
     }
     Ok(report)
+}
+
+fn run_host(
+    host: Host,
+    bin: &Path,
+    extra: &[String],
+    prompt: &str,
+    prompt_path: &Path,
+) -> Result<std::process::Output> {
+    let mut cmd = Command::new(bin);
+    match host {
+        Host::Grok => {
+            cmd.arg("--prompt-file")
+                .arg(prompt_path)
+                .arg("--output-format")
+                .arg("json")
+                .arg("--max-turns")
+                .arg("4")
+                .arg("--disallowed-tools")
+                .arg("run_terminal_cmd,search_replace,web_search,read_file");
+            for e in extra {
+                cmd.arg(e);
+            }
+            cmd.stdin(Stdio::null());
+        }
+        Host::Claude => {
+            cmd.arg("-p")
+                .arg("--output-format")
+                .arg("json")
+                .arg("--max-turns")
+                .arg("4");
+            for e in extra {
+                cmd.arg(e);
+            }
+            cmd.arg(prompt);
+            cmd.stdin(Stdio::null());
+        }
+        Host::Codex => {
+            cmd.arg("exec").arg("--sandbox").arg("read-only").arg("-");
+            for e in extra {
+                cmd.arg(e);
+            }
+            cmd.stdin(Stdio::piped());
+        }
+    }
+    if host == Host::Codex {
+        let mut child = cmd
+            .spawn()
+            .with_context(|| format!("启动 {} 失败", bin.display()))?;
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin.write_all(prompt.as_bytes())?;
+        }
+        child
+            .wait_with_output()
+            .with_context(|| format!("等待 {} 失败", bin.display()))
+    } else {
+        cmd.output()
+            .with_context(|| format!("执行 {} 失败", bin.display()))
+    }
 }
 
 fn slim_payload(payload: &CollectPayload) -> serde_json::Value {
@@ -130,11 +173,11 @@ fn parse_llm_json(stdout: &str) -> Result<LlmReport> {
 
 fn extract_embedded_json(s: &str) -> Result<LlmReport> {
     let s = s.trim();
-    let start = s.find('{').context("grok 输出中没有 JSON 对象")?;
-    let end = s.rfind('}').context("grok 输出 JSON 不完整")?;
+    let start = s.find('{').context("模型输出中没有 JSON 对象")?;
+    let end = s.rfind('}').context("模型输出 JSON 不完整")?;
     let slice = &s[start..=end];
     serde_json::from_str(slice)
-        .with_context(|| format!("无法解析 grok JSON：{}", crate::util::truncate(slice, 400)))
+        .with_context(|| format!("无法解析 JSON：{}", crate::util::truncate(slice, 400)))
 }
 
 fn truncate_log(s: &str, n: usize) -> String {

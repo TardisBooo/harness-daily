@@ -1,0 +1,6 @@
+manifest_version: 1
+name: harness-daily
+version: 0.1.0
+description: Scan local AI coding harness sessions and write a daily work report via the current agent CLI.
+author: harness-daily contributors
+kind: standalone
