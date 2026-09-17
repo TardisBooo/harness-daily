@@ -1,0 +1,5 @@
+/target
+*.exe
+.harness-daily-last-collect.json
+.DS_Store
+Thumbs.db

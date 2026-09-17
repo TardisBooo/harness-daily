@@ -1,0 +1,15 @@
+# 复制到 %APPDATA%/harness-daily/adapters/ 以扩展未知 harness。
+# v0.1 采集器尚未加载这些 toml（内置五家足够）；格式作为贡献约定保留。
+
+id = "example"
+label = "Example CLI"
+binaries = ["example"]
+roots = ["~/.example"]
+
+[extract]
+glob = "sessions/**/*.jsonl"
+timestamp = "timestamp"
+text = "message.content"
+cwd = "cwd"
+role = "message.role"
+role_keep = ["user"]
