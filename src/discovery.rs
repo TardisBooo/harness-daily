@@ -63,7 +63,10 @@ pub fn scan_roots(cfg: &Config) -> Vec<HarnessRoot> {
             None => out.push(HarnessRoot {
                 id: id.into(),
                 label,
-                path: builtin_candidates(id).into_iter().next().unwrap_or_default(),
+                path: builtin_candidates(id)
+                    .into_iter()
+                    .next()
+                    .unwrap_or_default(),
                 detected: false,
             }),
         }

@@ -3,6 +3,6 @@
   "version": "0.1.0",
   "description": "Scan local AI coding harness sessions and write a Chinese daily work report via Grok Build.",
   "author": { "name": "harness-daily contributors" },
-  "homepage": "https://github.com/harness-daily/harness-daily",
+  "homepage": "https://github.com/TardisBooo/harness-daily",
   "keywords": ["daily-report", "codex", "claude", "grok", "pi", "omp"]
 }

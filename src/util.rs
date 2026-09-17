@@ -27,8 +27,20 @@ const SKIP_PREFIXES: &[&str] = &[
 ];
 
 const NOISE: &[&str] = &[
-    "继续", "continue", "ok", "okay", "好", "是", "对", "yes", "no", "next", "go", "说中文",
-    "已经关闭wps了", "开始修复",
+    "继续",
+    "continue",
+    "ok",
+    "okay",
+    "好",
+    "是",
+    "对",
+    "yes",
+    "no",
+    "next",
+    "go",
+    "说中文",
+    "已经关闭wps了",
+    "开始修复",
 ];
 
 pub fn parse_tz(name: &str) -> Result<Tz> {
@@ -71,7 +83,10 @@ pub fn day_bounds(date: NaiveDate, tz: Tz) -> (DateTime<Utc>, DateTime<Utc>) {
         .and_local_timezone(tz)
         .single()
         .expect("next midnight");
-    (start_local.with_timezone(&Utc), end_local.with_timezone(&Utc))
+    (
+        start_local.with_timezone(&Utc),
+        end_local.with_timezone(&Utc),
+    )
 }
 
 pub fn in_day(ts: DateTime<Utc>, start: DateTime<Utc>, end: DateTime<Utc>) -> bool {
@@ -80,13 +95,16 @@ pub fn in_day(ts: DateTime<Utc>, start: DateTime<Utc>, end: DateTime<Utc>) -> bo
 
 pub fn clean_prompt(text: &str) -> String {
     let cmd = CMD_RE.get_or_init(|| {
-        Regex::new(r"(?s)<command-message>(.*?)</command-message>.*?<command-args>(.*?)</command-args>")
-            .unwrap()
+        Regex::new(
+            r"(?s)<command-message>(.*?)</command-message>.*?<command-args>(.*?)</command-args>",
+        )
+        .unwrap()
     });
     let image = IMAGE_RE.get_or_init(|| Regex::new(r"\[Image #\d+\]\s*").unwrap());
     let leading = LEADING_RE.get_or_init(|| Regex::new(r"(?i)^(继续|continue)[。.\s]*").unwrap());
-    let handoff = HANDOFF_RE
-        .get_or_init(|| Regex::new(r"(?i)\[MOBIUS_HANDOFF[^\]]*\]\s*(MOBIUS HANDOFF:\s*)?").unwrap());
+    let handoff = HANDOFF_RE.get_or_init(|| {
+        Regex::new(r"(?i)\[MOBIUS_HANDOFF[^\]]*\]\s*(MOBIUS HANDOFF:\s*)?").unwrap()
+    });
     let mut t = text.split_whitespace().collect::<Vec<_>>().join(" ");
     if let Some(c) = cmd.captures(&t) {
         t = format!("/{} {}", c[1].trim(), c[2].trim())

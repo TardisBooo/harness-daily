@@ -10,12 +10,7 @@ fn fallback_projects(payload: &CollectPayload) -> Vec<LlmProject> {
         .map(|p| LlmProject {
             name: p.name.clone(),
             path: Some(p.path.clone()),
-            items: p
-                .prompts
-                .iter()
-                .take(3)
-                .map(|t| truncate(t, 120))
-                .collect(),
+            items: p.prompts.iter().take(3).map(|t| truncate(t, 120)).collect(),
         })
         .collect()
 }
@@ -30,7 +25,11 @@ pub fn render(
     let wd = weekday_zh(date);
     let now = Local::now().format("%Y-%m-%d %H:%M:%S");
     let mut lines = Vec::new();
-    lines.push(format!("# 工作日报 · {}（{}）", date.format("%Y-%m-%d"), wd));
+    lines.push(format!(
+        "# 工作日报 · {}（{}）",
+        date.format("%Y-%m-%d"),
+        wd
+    ));
     lines.push(String::new());
     lines.push(format!(
         "> 统计口径：{} 00:00 – 24:00（{}），来源：本机 AI coding harness 会话。",
@@ -77,9 +76,10 @@ pub fn render(
             p.name.clone()
         };
         let path = p.path.clone().unwrap_or_default();
-        let local = payload.projects.iter().find(|x| {
-            x.path == path || x.name == name || p.path.as_ref() == Some(&x.path)
-        });
+        let local = payload
+            .projects
+            .iter()
+            .find(|x| x.path == path || x.name == name || p.path.as_ref() == Some(&x.path));
         lines.push(String::new());
         lines.push(format!("### {name}"));
         lines.push(String::new());

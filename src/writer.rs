@@ -7,43 +7,15 @@ use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parse_plain_json() {
-        let s = r#"{"projects":[{"name":"MyDesk","path":"E:\\x","items":["做了 A"]}],"issues":[]}"#;
-        let r = parse_llm_json(s).unwrap();
-        assert_eq!(r.projects[0].name, "MyDesk");
-        assert_eq!(r.projects[0].items[0], "做了 A");
-    }
-
-    #[test]
-    fn parse_wrapped_result() {
-        let inner = r#"{"projects":[{"name":"p","items":["x"]}],"issues":[]}"#;
-        let s = serde_json::json!({"type":"result","result": inner}).to_string();
-        let r = parse_llm_json(&s).unwrap();
-        assert_eq!(r.projects[0].name, "p");
-    }
-
-    #[test]
-    fn parse_text_field() {
-        let inner = r#"{ "projects": [ { "name": "MyDesk", "items": ["做了 A"] } ], "issues": [] }"#;
-        let s = serde_json::json!({"text": inner, "stopReason": "end_turn"}).to_string();
-        let r = parse_llm_json(&s).unwrap();
-        assert_eq!(r.projects[0].name, "MyDesk");
-    }
-}
-
-pub fn write_with_grok(cfg: &Config, payload: &CollectPayload, work_dir: &Path) -> Result<LlmReport> {
+pub fn write_with_grok(
+    cfg: &Config,
+    payload: &CollectPayload,
+    work_dir: &Path,
+) -> Result<LlmReport> {
     fs::create_dir_all(work_dir)?;
     let collect_path = work_dir.join("collect.json");
     let prompt_path = work_dir.join("writer-prompt.md");
-    fs::write(
-        &collect_path,
-        serde_json::to_string_pretty(payload)?,
-    )?;
+    fs::write(&collect_path, serde_json::to_string_pretty(payload)?)?;
     fs::write(&prompt_path, build_prompt(payload))?;
 
     let bin = find_grok_bin(cfg).context("找不到 grok 可执行文件，请先安装并登录 Grok Build")?;
@@ -161,9 +133,8 @@ fn extract_embedded_json(s: &str) -> Result<LlmReport> {
     let start = s.find('{').context("grok 输出中没有 JSON 对象")?;
     let end = s.rfind('}').context("grok 输出 JSON 不完整")?;
     let slice = &s[start..=end];
-    serde_json::from_str(slice).with_context(|| {
-        format!("无法解析 grok JSON：{}", crate::util::truncate(slice, 400))
-    })
+    serde_json::from_str(slice)
+        .with_context(|| format!("无法解析 grok JSON：{}", crate::util::truncate(slice, 400)))
 }
 
 fn truncate_log(s: &str, n: usize) -> String {
@@ -175,4 +146,34 @@ pub fn save_collect_snapshot(output_dir: &Path, payload: &CollectPayload) -> Res
     let mut f = fs::File::create(&p)?;
     f.write_all(serde_json::to_string_pretty(payload)?.as_bytes())?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_plain_json() {
+        let s = r#"{"projects":[{"name":"MyDesk","path":"E:\\x","items":["做了 A"]}],"issues":[]}"#;
+        let r = parse_llm_json(s).unwrap();
+        assert_eq!(r.projects[0].name, "MyDesk");
+        assert_eq!(r.projects[0].items[0], "做了 A");
+    }
+
+    #[test]
+    fn parse_wrapped_result() {
+        let inner = r#"{"projects":[{"name":"p","items":["x"]}],"issues":[]}"#;
+        let s = serde_json::json!({"type":"result","result": inner}).to_string();
+        let r = parse_llm_json(&s).unwrap();
+        assert_eq!(r.projects[0].name, "p");
+    }
+
+    #[test]
+    fn parse_text_field() {
+        let inner =
+            r#"{ "projects": [ { "name": "MyDesk", "items": ["做了 A"] } ], "issues": [] }"#;
+        let s = serde_json::json!({"text": inner, "stopReason": "end_turn"}).to_string();
+        let r = parse_llm_json(&s).unwrap();
+        assert_eq!(r.projects[0].name, "MyDesk");
+    }
 }

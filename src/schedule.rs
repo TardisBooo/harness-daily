@@ -30,16 +30,7 @@ pub fn install(cfg: &Config) -> Result<()> {
         let tr = format!("\"{exe_s}\" report --auto --backfill {}", cfg.backfill_days);
         let status = Command::new("schtasks")
             .args([
-                "/Create",
-                "/TN",
-                TASK_NAME,
-                "/TR",
-                &tr,
-                "/SC",
-                "DAILY",
-                "/ST",
-                &time,
-                "/F",
+                "/Create", "/TN", TASK_NAME, "/TR", &tr, "/SC", "DAILY", "/ST", &time, "/F",
             ])
             .status()
             .context("调用 schtasks 失败")?;
@@ -47,7 +38,7 @@ pub fn install(cfg: &Config) -> Result<()> {
             anyhow::bail!("schtasks /Create 失败");
         }
         println!("已安装 Windows 计划任务 {TASK_NAME}（每天 {}）", time);
-        return Ok(());
+        Ok(())
     }
     #[cfg(target_os = "macos")]
     {
@@ -88,22 +79,25 @@ pub fn install(cfg: &Config) -> Result<()> {
             .args(["load", &plist.display().to_string()])
             .status()?;
         println!("已安装 launchd {}", plist.display());
-        return Ok(());
+        Ok(())
     }
     #[cfg(not(any(windows, target_os = "macos")))]
     {
-        let line = format!(
-            "{} * * * {} report --auto --backfill {} # harness-daily",
-            {
-                let mut it = time.split(':');
-                let h = it.next().unwrap_or("8");
-                let m = it.next().unwrap_or("0");
-                format!("{m} {h}")
-            },
-            exe.display(),
+        let (h, m) = {
+            let mut it = time.split(':');
+            let h = it.next().unwrap_or("8");
+            let m = it.next().unwrap_or("0");
+            (h, m)
+        };
+        println!(
+            "请将以下行加入 crontab（每天 {}:{} 触发）：\n{} {} * * * \"{}\" report --auto --backfill {}",
+            h,
+            m,
+            m,
+            h,
+            exe_s,
             cfg.backfill_days
         );
-        println!("请将以下行加入 crontab:\n{line}");
         Ok(())
     }
 }
@@ -118,7 +112,7 @@ pub fn remove() -> Result<()> {
             anyhow::bail!("删除计划任务失败（可能本来就不存在）");
         }
         println!("已删除计划任务 {TASK_NAME}");
-        return Ok(());
+        Ok(())
     }
     #[cfg(target_os = "macos")]
     {
@@ -130,7 +124,7 @@ pub fn remove() -> Result<()> {
             .status();
         let _ = std::fs::remove_file(&plist);
         println!("已移除 launchd 任务");
-        return Ok(());
+        Ok(())
     }
     #[cfg(not(any(windows, target_os = "macos")))]
     {
@@ -148,7 +142,7 @@ pub fn status() -> Result<()> {
         if !status.success() {
             println!("计划任务 {TASK_NAME} 未安装");
         }
-        return Ok(());
+        Ok(())
     }
     #[cfg(not(windows))]
     {
@@ -167,7 +161,7 @@ pub fn run_now() -> Result<()> {
             anyhow::bail!("schtasks /Run 失败");
         }
         println!("已触发计划任务 {TASK_NAME}");
-        return Ok(());
+        Ok(())
     }
     #[cfg(not(windows))]
     {

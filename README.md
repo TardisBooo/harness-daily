@@ -1,59 +1,209 @@
+<div align="center">
+
 # harness-daily
 
-扫描本机 **Codex / Claude Code / Grok Build / Pi / OMP** 会话，按项目归纳后交给 **Grok Build** 写成企业日报，写入本地 Markdown。
+**One command turns yesterday's AI coding sessions into an enterprise-style daily report — written by the coding agent you already trust.**
 
-- 采集在本地完成，不上传完整会话。
-- 写正文使用你已经登录的 Grok（`grok -p`），不必再配一套 LLM key。
-- 每天由系统计划任务触发，不依赖某个 IDE 窗口开着。
+_Scan locally · Summarize with Grok Build · No extra API keys · Windows / macOS / Linux_
 
-## 安装（Grok Build 插件）
+[![CI](https://github.com/TardisBooo/harness-daily/actions/workflows/ci.yml/badge.svg)](https://github.com/TardisBooo/harness-daily/actions/workflows/ci.yml)
+[![Release](https://github.com/TardisBooo/harness-daily/actions/workflows/release.yml/badge.svg)](https://github.com/TardisBooo/harness-daily/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-32CD32.svg)](LICENSE)
+![Rust](https://img.shields.io/badge/rust-1.75%2B-orange)
+![Platforms](https://img.shields.io/badge/platform-windows%20%7C%20macos%20%7C%20linux-blue)
 
-需要已安装并登录 [Grok Build](https://github.com/xai-org) CLI。
+**English** | [简体中文](README.zh-CN.md)
 
-```bash
-# 从本地仓库（开发）
-grok plugin install ./harness-daily --trust
+</div>
 
-# 或放到自动信任目录
-# ~/.grok/plugins/harness-daily
+---
+
+## 📋 Quick Navigation
+
+[Why harness-daily?](#-why-harness-daily) ·
+[How it works](#-how-it-works) ·
+[Requirements](#-requirements) ·
+[Install](#-install) ·
+[Quick start](#-quick-start) ·
+[Commands](#-commands) ·
+[Configuration](#-configuration) ·
+[Report format](#-report-format) ·
+[Extending](#-extending) ·
+[Development](#-development) ·
+[Contributing](#-contributing) ·
+[License](#-license)
+
+---
+
+## 🤔 Why harness-daily?
+
+If you work with multiple AI coding agents — Codex, Claude Code, Grok Build, Pi, OMP — your day is
+scattered across dozens of sessions in half a dozen projects. Writing a daily standup report means
+digging through histories by hand.
+
+harness-daily does it for you:
+
+- **Scans every harness locally** — reads session/prompt logs from disk; nothing leaves your machine
+  except the distilled prompts you choose to send to your own Grok Build CLI.
+- **Writes the prose with Grok Build** — the report body is composed by `grok -p` using your
+  existing login. No second API key, no new account.
+- **Enterprise-report format** — "today's work" grouped by project with merged work items; raw
+  prompts go to an audit appendix, not the summary.
+- **Self-healing schedule** — the OS task runs `report --auto --backfill 7`, so a powered-off
+  machine at 08:00 still gets its missing reports the next time it boots.
+
+```text
+08:00 (OS task) → harness-daily report
+   ├─ discover roots  (codex / claude / grok / pi / omp, incl. desktop apps sharing those dirs)
+   ├─ collect         (parse JSONL, dedupe, drop "continue"/"ok"/smoke-test noise)
+   ├─ write with grok (grok --prompt-file … --output-format json; your login, your default model)
+   └─ render          D:/Me/工作日志/日报-YYYY-MM-DD.md   ← summary · details · issues · stats · audit log
 ```
 
-编译并初始化采集器：
+## 🧭 How it works
 
-```bash
-cargo install --path .
-harness-daily init --host grok --out "D:/Me/工作日志"
-harness-daily doctor
+| Piece | Responsibility |
+|---|---|
+| `harness-daily` (Rust binary) | Discover harness data dirs (junction-aware), parse session logs, aggregate prompts per project, call `grok`, render Markdown, install the OS schedule |
+| Grok Build plugin (`skills/`, `commands/`) | Lets you run `/harness-daily` inside an interactive Grok session |
+| `grok -p` (headless) | Reads the embedded collection JSON and returns a strict JSON report body |
+| OS scheduler | Windows `schtasks` / macOS `launchd` / Linux cron — fires `report --auto --backfill 7` daily |
+
+Supported out of the box: **Codex CLI** (`~/.codex`), **Claude Code** (`~/.claude`), **Grok Build**
+(`~/.grok`), **Pi** (`~/.pi`), **OMP** (`~/.omp`). Desktop apps that share those directories are
+covered automatically. Moved a data dir? Point `[harnesses.<id>].data_dir` at the new location.
+
+## ✅ Requirements
+
+- [Grok Build](https://x.ai/cli) CLI installed and **logged in** (it provides the writing model)
+- Windows, macOS, or Linux
+- Optional: [Rust](https://rustup.rs) if you build from source
+
+## 📦 Install
+
+### 1. Get the binary
+
+**Download from Releases** (recommended):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/TardisBooo/harness-daily/main/install.sh | bash   # macOS / Linux
+irm https://raw.githubusercontent.com/TardisBooo/harness-daily/main/install.ps1 | iex          # Windows PowerShell
+```
+
+**Or with cargo:**
+
+```sh
+cargo install --git https://github.com/TardisBooo/harness-daily
+```
+
+**Or from source:**
+
+```sh
+git clone https://github.com/TardisBooo/harness-daily
+cd harness-daily && cargo install --path .
+```
+
+### 2. Install the Grok plugin
+
+```sh
+grok plugin install TardisBooo/harness-daily --trust
+```
+
+This adds the `/harness-daily` slash command to interactive Grok sessions.
+
+## 🚀 Quick start
+
+```sh
+harness-daily init --host grok --out "D:/Me/工作日志"   # detect harnesses, write config
+harness-daily doctor                                    # verify grok login + paths
+harness-daily report                                    # write yesterday's report now
+harness-daily schedule install --time 08:00             # daily at 08:00, self-backfilling
+```
+
+Generate a specific day or catch up a week:
+
+```sh
 harness-daily report --date 2026-09-16
-harness-daily schedule install --time 08:00
+harness-daily report --backfill 7 --auto
 ```
 
-Windows 上二进制还会复制到 `%LOCALAPPDATA%\harness-daily\harness-daily.exe`，计划任务走这个路径。
-
-## 日报结构
-
-1. 今日工作总结（只按项目写工作内容）
-2. 工作明细
-3. 问题与待办
-4. 工作量统计
-5. 附录：操作审计日志
-
-## 命令
+## 🎛 Commands
 
 ```
-harness-daily init --host grok
-harness-daily scan
-harness-daily doctor
-harness-daily report [--date YYYY-MM-DD] [--backfill 7] [--auto] [--dry-collect]
-harness-daily schedule install|remove|status|run
+harness-daily init --host grok [--out DIR] [--time 08:00]   write config + install binary locally
+harness-daily scan                                          list detected harness data roots
+harness-daily doctor                                        self-check grok login, paths, output dir
+harness-daily report [--date D] [--backfill N] [--auto]
+                         [--dry-collect] [--out DIR]        generate report(s)
+harness-daily schedule install|remove|status|run            manage the OS scheduled task
 ```
 
-## 配置
+`--auto` skips dates whose report file already exists; `--dry-collect` only writes the collection
+JSON (no model call) for debugging.
 
-`%APPDATA%/harness-daily/config.toml`（macOS/Linux：`~/.config/harness-daily/config.toml`）
+## ⚙️ Configuration
 
-迁走过的数据目录用 `[harnesses.<id>].data_dir` 或 `extra_roots`。
+`%APPDATA%/harness-daily/config.toml` (Windows) · `~/.config/harness-daily/config.toml` (macOS/Linux)
 
-## 许可
+```toml
+timezone    = "Asia/Shanghai"
+output_dir  = 'D:\Me\工作日志'
+report_time = "08:00"
+backfill_days = 7
+extra_roots = []            # extra scan roots (moved data dirs)
 
-MIT
+[writer]
+host = "grok"               # the CLI that writes the report body
+bin  = 'C:\Users\you\.grok\bin\grok.exe'
+
+[report]
+include_audit_log = true    # set false to omit the raw-prompt appendix
+include_stats     = true
+
+[harnesses.codex]
+enabled  = true
+data_dir = ""               # override if you moved ~/.codex
+```
+
+## 📄 Report format
+
+```markdown
+# 工作日报 · 2026-09-16（周三）
+## 一、今日工作总结      ← per project, merged work items (no tools, no times)
+## 二、工作明细          ← path · time span · completed items
+## 三、问题与待办        ← issues the model extracted
+## 四、工作量统计        ← sessions / prompts per harness
+## 附录：操作审计日志    ← every raw prompt of the day, time-sorted
+```
+
+## 🧩 Extending
+
+- **New harness / desktop app**: copy [`adapters/example-jsonl.toml`](adapters/example-jsonl.toml)
+  into your config dir and edit the paths/keys. Built-in Rust adapters live in `src/collect.rs`;
+  PRs welcome (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
+- **Different writer CLI**: the pipeline is writer-agnostic by design; today only
+  `--host grok` is shipped.
+- **Privacy**: everything is local. Only the per-project prompt digest is passed to your own
+  `grok -p` process; the audit appendix can be disabled.
+
+## 🛠 Development
+
+```sh
+cargo test                 # unit tests (JSON parsing, timezone bounds, noise filters)
+cargo clippy --all-targets -- -D warnings
+cargo fmt --check
+cargo run -- scan           # try discovery against your real machine
+```
+
+Repository layout: `src/collect.rs` (per-harness collectors) · `src/writer.rs` (grok headless
+invocation + strict-JSON recovery) · `src/render.rs` (Markdown assembly) · `src/schedule.rs`
+(Windows/macOS/Linux schedulers) · `skills/` + `commands/` (Grok plugin).
+
+## 🤝 Contributing
+
+Bug reports and new-harness adapters are very welcome — see
+[CONTRIBUTING.md](CONTRIBUTING.md). For security issues, see [SECURITY.md](SECURITY.md).
+
+## 📜 License
+
+[MIT](LICENSE)

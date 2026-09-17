@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Scan local AI coding harness sessions and write a daily work report via your Grok Build CLI."
 license = "MIT"
-repository = "https://github.com/harness-daily/harness-daily"
+repository = "https://github.com/TardisBooo/harness-daily"
 readme = "README.md"
 
 [[bin]]

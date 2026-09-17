@@ -109,10 +109,12 @@ impl Config {
     pub fn load() -> Result<Self> {
         let path = Self::config_path();
         if !path.exists() {
-            anyhow::bail!("未找到配置文件 {}，请先运行 harness-daily init", path.display());
+            anyhow::bail!(
+                "未找到配置文件 {}，请先运行 harness-daily init",
+                path.display()
+            );
         }
-        let text = fs::read_to_string(&path)
-            .with_context(|| format!("读取 {}", path.display()))?;
+        let text = fs::read_to_string(&path).with_context(|| format!("读取 {}", path.display()))?;
         toml::from_str(&text).with_context(|| format!("解析 {}", path.display()))
     }
 
@@ -160,7 +162,8 @@ impl Config {
             "omp" => self.harnesses.omp.as_ref(),
             _ => None,
         };
-        ov.and_then(|o| o.data_dir.clone()).filter(|p| !p.as_os_str().is_empty())
+        ov.and_then(|o| o.data_dir.clone())
+            .filter(|p| !p.as_os_str().is_empty())
     }
 }
 

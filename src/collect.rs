@@ -81,7 +81,10 @@ fn collect_codex(root: &Path, start: DateTime<Utc>, end: DateTime<Utc>) -> Vec<A
     let mut recent: HashMap<(String, String), DateTime<Utc>> = HashMap::new();
     if history.exists() {
         for obj in iter_jsonl(&history) {
-            let Some(raw) = obj.get("ts").and_then(|v| v.as_i64().or_else(|| v.as_f64().map(|f| f as i64))) else {
+            let Some(raw) = obj
+                .get("ts")
+                .and_then(|v| v.as_i64().or_else(|| v.as_f64().map(|f| f as i64)))
+            else {
                 continue;
             };
             let ts = DateTime::<Utc>::from_timestamp(raw, 0).unwrap_or(Utc::now());
@@ -155,10 +158,7 @@ fn collect_claude(root: &Path, start: DateTime<Utc>, end: DateTime<Utc>) -> Vec<
             }
             let t = json_str(&obj, "type").unwrap_or("");
             let mut text = None;
-            if t == "queue-operation"
-                && json_str(&obj, "operation") == Some("enqueue")
-                && in_d
-            {
+            if t == "queue-operation" && json_str(&obj, "operation") == Some("enqueue") && in_d {
                 text = Some(clean_prompt(json_str(&obj, "content").unwrap_or("")));
             } else if t == "user" && in_d {
                 if let Some(content) = obj
@@ -214,7 +214,11 @@ fn collect_grok(root: &Path, start: DateTime<Utc>, end: DateTime<Utc>) -> Vec<Ac
             if !in_day(ts, start, end) {
                 continue;
             }
-            if obj.get("is_bash").and_then(|v| v.as_bool()).unwrap_or(false) {
+            if obj
+                .get("is_bash")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
+            {
                 continue;
             }
             let sid = json_str(&obj, "session_id").unwrap_or("?").to_string();
@@ -301,9 +305,7 @@ fn collect_pi_like(
                     title = Some(ti.to_string());
                 }
             }
-            let project = cwd
-                .clone()
-                .unwrap_or_else(|| decode_pi_dir(&parent));
+            let project = cwd.clone().unwrap_or_else(|| decode_pi_dir(&parent));
             if let Some(ts) = ts {
                 if in_day(ts, start, end) && !had_session {
                     had_session = true;
@@ -371,7 +373,10 @@ fn bundle(date: NaiveDate, tz: Tz, acts: Vec<Activity>) -> CollectPayload {
             }
             continue;
         }
-        by_proj.entry(a.project.clone()).or_default().push(a.clone());
+        by_proj
+            .entry(a.project.clone())
+            .or_default()
+            .push(a.clone());
     }
     let mut projects: Vec<ProjectBundle> = by_proj
         .into_iter()

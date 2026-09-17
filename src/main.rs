@@ -16,7 +16,11 @@ use std::path::PathBuf;
 use std::process::Command;
 
 #[derive(Parser)]
-#[command(name = "harness-daily", version, about = "Scan AI coding harness sessions and write a daily report via Grok Build")]
+#[command(
+    name = "harness-daily",
+    version,
+    about = "Scan AI coding harness sessions and write a daily report via Grok Build"
+)]
 struct Cli {
     #[command(subcommand)]
     cmd: Cmd,
@@ -60,7 +64,10 @@ enum Cmd {
 
 #[derive(Subcommand)]
 enum ScheduleCmd {
-    Install { #[arg(long)] time: Option<String> },
+    Install {
+        #[arg(long)]
+        time: Option<String>,
+    },
     Remove,
     Status,
     Run,
@@ -138,19 +145,17 @@ fn install_self() -> Result<PathBuf> {
         "harness-daily"
     });
     if src != dest {
-        fs::copy(&src, &dest).with_context(|| {
-            format!("复制 {} → {}", src.display(), dest.display())
-        })?;
+        fs::copy(&src, &dest)
+            .with_context(|| format!("复制 {} → {}", src.display(), dest.display()))?;
     }
     Ok(dest)
 }
 
 fn cmd_scan() -> Result<()> {
-    let cfg = Config::load().unwrap_or_else(|_| {
-        Config::load_or_default(config::default_output_dir())
-    });
+    let cfg =
+        Config::load().unwrap_or_else(|_| Config::load_or_default(config::default_output_dir()));
     let roots = discovery::scan_roots(&cfg);
-    println!("{:<8} {:<12} {}", "id", "status", "path");
+    println!("{:<8} {:<12} path", "id", "status");
     for r in roots {
         let st = if r.detected { "ok" } else { "missing" };
         println!("{:<8} {:<12} {}", r.id, st, r.path.display());
@@ -231,17 +236,16 @@ fn generate_one(cfg: &Config, date: NaiveDate, auto: bool, dry_collect: bool) ->
     }
     writer::save_collect_snapshot(&cfg.output_dir, &payload)?;
     if dry_collect {
-        let p = cfg.output_dir.join(format!(
-            "collect-{}.json",
-            date.format("%Y-%m-%d")
-        ));
+        let p = cfg
+            .output_dir
+            .join(format!("collect-{}.json", date.format("%Y-%m-%d")));
         fs::write(&p, serde_json::to_string_pretty(&payload)?)?;
         println!("[dry] 已写入 {}", p.display());
         return Ok(());
     }
     let work = cfg.output_dir.join(".harness-daily-work");
-    let llm = writer::write_with_grok(cfg, &payload, &work)
-        .context("调用 Grok Build 写正文失败")?;
+    let llm =
+        writer::write_with_grok(cfg, &payload, &work).context("调用 Grok Build 写正文失败")?;
     let md = render::render(
         date,
         &payload,
