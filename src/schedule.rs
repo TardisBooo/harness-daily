@@ -2,8 +2,10 @@ use crate::config::Config;
 use anyhow::{Context, Result};
 use std::env;
 use std::path::PathBuf;
+#[cfg(any(windows, target_os = "macos"))]
 use std::process::Command;
 
+#[cfg(any(windows, target_os = "macos"))]
 const TASK_NAME: &str = "harness-daily";
 
 fn exe_path() -> Result<PathBuf> {
