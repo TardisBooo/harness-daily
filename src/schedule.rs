@@ -5,7 +5,7 @@ use std::path::PathBuf;
 #[cfg(any(windows, target_os = "macos"))]
 use std::process::Command;
 
-#[cfg(any(windows, target_os = "macos"))]
+#[cfg(windows)]
 const TASK_NAME: &str = "harness-daily";
 
 fn exe_path() -> Result<PathBuf> {
@@ -25,11 +25,14 @@ fn exe_path() -> Result<PathBuf> {
 
 pub fn install(cfg: &Config) -> Result<()> {
     let exe = exe_path()?;
-    let exe_s = exe.display().to_string();
     let time = cfg.report_time.clone();
     #[cfg(windows)]
     {
-        let tr = format!("\"{exe_s}\" report --auto --backfill {}", cfg.backfill_days);
+        let tr = format!(
+            "\"{}\" report --auto --backfill {}",
+            exe.display(),
+            cfg.backfill_days
+        );
         let status = Command::new("schtasks")
             .args([
                 "/Create", "/TN", TASK_NAME, "/TR", &tr, "/SC", "DAILY", "/ST", &time, "/F",
@@ -97,7 +100,7 @@ pub fn install(cfg: &Config) -> Result<()> {
             m,
             m,
             h,
-            exe_s,
+            exe.display(),
             cfg.backfill_days
         );
         Ok(())
