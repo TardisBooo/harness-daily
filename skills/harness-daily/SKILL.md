@@ -31,6 +31,18 @@ harness-daily report --date YYYY-MM-DD --dry-collect
 
 ## 安装与定时
 
+Marketplace（推荐，与 agent-triforce 相同）：
+
+```
+/plugin marketplace add TardisBooo/harness-daily
+/plugin install harness-daily@harness-daily
+/harness-daily:setup
+```
+
+Grok 在 add marketplace 之后用 `/plugin install harness-daily --trust`。
+
+已经有二进制时：
+
 ```bash
 harness-daily init --host auto --out "D:/Me/工作日志"
 harness-daily doctor

@@ -4,7 +4,7 @@
 
 **一条命令，把昨天的 AI 编码会话变成企业风格的日报 —— 由你已经在用的那套 agent CLI 亲自写。**
 
-_本地扫描 · Grok Build 写正文 · 无需额外 API Key · Windows / macOS / Linux_
+_本地扫描 · Grok / Claude / Codex 写正文 · Marketplace 安装 · 无需额外 API Key_
 
 [![CI](https://github.com/TardisBooo/harness-daily/actions/workflows/ci.yml/badge.svg)](https://github.com/TardisBooo/harness-daily/actions/workflows/ci.yml)
 [![Release](https://github.com/TardisBooo/harness-daily/actions/workflows/release.yml/badge.svg)](https://github.com/TardisBooo/harness-daily/actions/workflows/release.yml)
@@ -24,6 +24,7 @@ _本地扫描 · Grok Build 写正文 · 无需额外 API Key · Windows / macOS
 [工作原理](#-工作原理) ·
 [环境要求](#-环境要求) ·
 [安装](#-安装) ·
+[安装教程](docs/install.zh-CN.md) ·
 [快速上手](#-快速上手) ·
 [命令](#-命令) ·
 [配置](#-配置) ·
@@ -77,41 +78,59 @@ harness-daily 替你做：
 
 ## 📦 安装
 
-### 1. 获取二进制
+推荐走 **plugin marketplace**（和 [agent-triforce](https://github.com/ArtemioPadilla/agent-triforce) 同一套）：把 GitHub 仓库加成市场源，安装插件，再跑 setup。setup 会下载本机二进制、写配置、登记每天 08:00 的系统任务。逐步说明见 [docs/install.zh-CN.md](docs/install.zh-CN.md) · [English](docs/install.md)。
 
-**从 Releases 下载**（推荐）：
+### Claude Code
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/TardisBooo/harness-daily/main/install.sh | bash   # macOS / Linux
-irm https://raw.githubusercontent.com/TardisBooo/harness-daily/main/install.ps1 | iex          # Windows PowerShell
+```
+/plugin marketplace add TardisBooo/harness-daily
+/plugin install harness-daily@harness-daily
+/harness-daily:setup
 ```
 
-**或用 cargo：**
+### Grok Build
 
-```sh
-cargo install --git https://github.com/TardisBooo/harness-daily
+```
+/plugin marketplace add TardisBooo/harness-daily
+/plugin install harness-daily --trust
+/harness-daily:setup
 ```
 
-**或源码构建：**
+终端等价命令：
 
 ```sh
-git clone https://github.com/TardisBooo/harness-daily
-cd harness-daily && cargo install --path .
+grok plugin marketplace add TardisBooo/harness-daily
+grok plugin install harness-daily --trust
 ```
 
-### 2. 装进你正在用的 CLI
-
-同一仓库，三家都能装：
+### Codex CLI
 
 ```sh
-grok plugin install TardisBooo/harness-daily --trust
-claude plugin install TardisBooo/harness-daily
 codex plugin install TardisBooo/harness-daily
 ```
 
-会话里会有 `/harness-daily`。每天出报仍由系统定时任务 + `harness-daily` 二进制完成，不依赖聊天窗口开着。
+然后在会话里 `/harness-daily:setup`，或在终端：
+
+```sh
+irm https://raw.githubusercontent.com/TardisBooo/harness-daily/main/install.ps1 | iex   # Windows
+curl -fsSL https://raw.githubusercontent.com/TardisBooo/harness-daily/main/install.sh | bash
+harness-daily init --host auto
+harness-daily schedule install --time 08:00
+```
+
+插件只提供斜杠命令。每天出报由 **二进制 + 系统定时任务** 完成，不依赖聊天窗口开着。
+
+### 只要二进制（不装插件）
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/TardisBooo/harness-daily/main/install.sh | bash
+irm https://raw.githubusercontent.com/TardisBooo/harness-daily/main/install.ps1 | iex
+cargo install --git https://github.com/TardisBooo/harness-daily
+```
 
 ## 🚀 快速上手
+
+Marketplace 装完后跑 `/harness-daily:setup` 即可。终端：
 
 ```sh
 harness-daily init --host auto --out "D:/Me/工作日志"   # grok → claude → codex

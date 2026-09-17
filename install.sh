@@ -16,29 +16,38 @@ case "$(uname -s)-$(uname -m)" in
       TARGET="x86_64-unknown-linux-gnu"
     fi
     ;;
-  *) echo "Unsupported platform: $(uname -s)-$(uname -m); build from source with cargo." >&2; exit 1 ;;
+  *)
+    echo "Unsupported platform: $(uname -s)-$(uname -m); build from source with cargo." >&2
+    exit 1
+    ;;
 esac
 
-if ! command -v gh >/dev/null 2>&1; then
-  echo "GitHub CLI (gh) is required: https://cli.github.com" >&2
+ZIP="harness-daily-${TARGET}.zip"
+API="https://api.github.com/repos/${REPO}/releases/latest"
+URL="$(curl -fsSL -H 'User-Agent: harness-daily-install' "$API" | sed -n "s/.*\"browser_download_url\": \"\\(.*${ZIP}\\)\".*/\\1/p" | head -n1)"
+if [ -z "$URL" ]; then
+  echo "Could not find $ZIP on the latest GitHub release." >&2
   exit 1
 fi
 
-TAG="$(gh api "repos/$REPO/releases/latest" --jq .tag_name)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
-
-gh release download "$TAG" --repo "$REPO" --pattern "harness-daily-$TARGET.zip" --output "$TMP/hd.zip"
+curl -fsSL "$URL" -o "$TMP/hd.zip"
 mkdir -p "$INSTALL_DIR"
 unzip -oq "$TMP/hd.zip" -d "$TMP/out"
 BIN="$(find "$TMP/out" -type f -name harness-daily | head -n1)"
+if [ -z "$BIN" ]; then
+  echo "harness-daily binary missing inside $ZIP" >&2
+  exit 1
+fi
 mv "$BIN" "$INSTALL_DIR/harness-daily"
 chmod +x "$INSTALL_DIR/harness-daily"
 
 case ":$PATH:" in
   *":$INSTALL_DIR:"*) ;;
-  *) echo "Note: $INSTALL_DIR is not on your PATH." ;;
+  *) echo "Note: add $INSTALL_DIR to PATH if 'harness-daily' is not found." ;;
 esac
 
 "$INSTALL_DIR/harness-daily" --version
-echo "Next: harness-daily init --host grok --out <your-logs-dir>"
+echo "Next: harness-daily init --host auto --out <your-logs-dir>"
+echo "      harness-daily schedule install --time 08:00"

@@ -12,6 +12,10 @@ All notable changes to this project are documented here. The format follows
   `claude -p`, `codex exec` on stdin).
 - Plugin manifests for Claude Code (`.claude-plugin/`) and Codex (`plugin.yaml`)
   in the same repository as the Grok plugin.
+- Marketplace install: `/plugin marketplace add TardisBooo/harness-daily` then
+  `/plugin install harness-daily@harness-daily` (Claude) or
+  `/plugin install harness-daily --trust` (Grok), plus `/harness-daily:setup`.
+- Install scripts no longer require the GitHub CLI (`gh`).
 
 ## [0.1.0] — 2026-09-17
 

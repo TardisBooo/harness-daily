@@ -1,11 +1,21 @@
 {
   "name": "harness-daily",
+  "displayName": "harness-daily",
   "description": "Daily work reports from local AI coding harness sessions",
-  "owner": { "name": "harness-daily contributors" },
+  "version": "0.1.0",
+  "owner": { "name": "TardisBooo", "email": "TardisBooo@users.noreply.github.com" },
+  "homepage": "https://github.com/TardisBooo/harness-daily",
+  "repository": "https://github.com/TardisBooo/harness-daily",
+  "license": "MIT",
   "plugins": [
     {
       "name": "harness-daily",
-      "description": "Scan Codex / Claude / Grok / Pi / OMP sessions and write a daily report",
+      "description": "Scan Codex / Claude / Grok / Pi / OMP sessions and write a daily report via the current agent CLI",
+      "version": "0.1.0",
+      "author": { "name": "TardisBooo" },
+      "category": "productivity",
+      "homepage": "https://github.com/TardisBooo/harness-daily",
+      "keywords": ["daily-report", "codex", "claude", "grok", "pi", "omp"],
       "source": "./"
     }
   ]

@@ -4,7 +4,7 @@
 
 **One command turns yesterday's AI coding sessions into an enterprise-style daily report — written by whichever agent CLI you already use.**
 
-_Scan locally · Summarize with Grok Build · No extra API keys · Windows / macOS / Linux_
+_Scan locally · Write with Grok / Claude / Codex · Marketplace install · No extra API keys_
 
 [![CI](https://github.com/TardisBooo/harness-daily/actions/workflows/ci.yml/badge.svg)](https://github.com/TardisBooo/harness-daily/actions/workflows/ci.yml)
 [![Release](https://github.com/TardisBooo/harness-daily/actions/workflows/release.yml/badge.svg)](https://github.com/TardisBooo/harness-daily/actions/workflows/release.yml)
@@ -24,6 +24,7 @@ _Scan locally · Summarize with Grok Build · No extra API keys · Windows / mac
 [How it works](#-how-it-works) ·
 [Requirements](#-requirements) ·
 [Install](#-install) ·
+[Install tutorial](docs/install.md) ·
 [Quick start](#-quick-start) ·
 [Commands](#-commands) ·
 [Configuration](#-configuration) ·
@@ -81,42 +82,64 @@ covered automatically. Moved a data dir? Point `[harnesses.<id>].data_dir` at th
 
 ## 📦 Install
 
-### 1. Get the binary
+Recommended path is the **plugin marketplace** (same idea as
+[agent-triforce](https://github.com/ArtemioPadilla/agent-triforce)): add the GitHub repo as a
+source, install the plugin, then run setup. Setup downloads the native binary, writes config, and
+registers the 08:00 OS task. Step-by-step: [docs/install.md](docs/install.md) ·
+[中文安装教程](docs/install.zh-CN.md).
 
-**Download from Releases** (recommended):
+### Claude Code
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/TardisBooo/harness-daily/main/install.sh | bash   # macOS / Linux
-irm https://raw.githubusercontent.com/TardisBooo/harness-daily/main/install.ps1 | iex          # Windows PowerShell
+```
+/plugin marketplace add TardisBooo/harness-daily
+/plugin install harness-daily@harness-daily
+/harness-daily:setup
 ```
 
-**Or with cargo:**
+### Grok Build
+
+```
+/plugin marketplace add TardisBooo/harness-daily
+/plugin install harness-daily --trust
+/harness-daily:setup
+```
+
+From a shell (equivalent):
 
 ```sh
+grok plugin marketplace add TardisBooo/harness-daily
+grok plugin install harness-daily --trust
+```
+
+### Codex CLI
+
+```sh
+codex plugin install TardisBooo/harness-daily
+```
+
+Then run `/harness-daily:setup` in the session, or from a shell:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/TardisBooo/harness-daily/main/install.sh | bash
+# Windows: irm https://raw.githubusercontent.com/TardisBooo/harness-daily/main/install.ps1 | iex
+harness-daily init --host auto
+harness-daily schedule install --time 08:00
+```
+
+The plugin only adds skills/commands. Daily reports are produced by the **binary + OS scheduler**,
+not by an open chat window.
+
+### Binary only (no plugin)
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/TardisBooo/harness-daily/main/install.sh | bash
+irm https://raw.githubusercontent.com/TardisBooo/harness-daily/main/install.ps1 | iex   # Windows
 cargo install --git https://github.com/TardisBooo/harness-daily
 ```
 
-**Or from source:**
-
-```sh
-git clone https://github.com/TardisBooo/harness-daily
-cd harness-daily && cargo install --path .
-```
-
-### 2. Install the plugin into the CLI you use
-
-Same repository, three hosts:
-
-```sh
-grok plugin install TardisBooo/harness-daily --trust     # Grok Build
-claude plugin install TardisBooo/harness-daily           # Claude Code (marketplace / local path)
-codex plugin install TardisBooo/harness-daily            # Codex (if your Codex build supports git/local sources)
-```
-
-This adds `/harness-daily` (or the equivalent skill) inside that CLI. Daily generation still
-runs from the OS scheduler + the `harness-daily` binary, not from a live chat window.
-
 ## 🚀 Quick start
+
+After marketplace install, `/harness-daily:setup` is enough. From a shell:
 
 ```sh
 harness-daily init --host auto --out "D:/Me/工作日志"   # grok → claude → codex
