@@ -1,6 +1,8 @@
 # 安装 harness-daily
 
-安装方式和 [agent-triforce](https://github.com/ArtemioPadilla/agent-triforce) 一样：把 GitHub 仓库加成 plugin marketplace，安装插件，再跑 setup。
+harness-daily 是 **Grok Build / Claude Code / Codex 通用插件**：同一个 GitHub 仓库、同一套 skill/命令、同一份二进制。
+
+安装方式和 [agent-triforce](https://github.com/ArtemioPadilla/agent-triforce) 一样：把 GitHub 仓库加成 plugin marketplace，在你正在用的那套 harness 里安装插件，再跑 setup。
 
 插件只提供 skill / 斜杠命令。采集器是 **本机二进制**。`/harness-daily:setup` 负责下载二进制、写配置、登记每天 08:00 的系统任务。装完之后出报 **不依赖** 聊天窗口开着。
 

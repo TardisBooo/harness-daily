@@ -21,7 +21,7 @@ use std::process::Command;
 #[command(
     name = "harness-daily",
     version,
-    about = "Scan AI coding harness sessions and write a daily report via Grok Build"
+    about = "Scan local AI coding harness sessions and write a daily report via the current agent CLI"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -30,7 +30,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Cmd {
-    /// 写入默认配置（本机宿主为 Grok Build）
+    /// 写入默认配置（写正文宿主：auto / grok / claude / codex）
     Init {
         /// grok | claude | codex | auto（探测已安装并已登录的 CLI）
         #[arg(long, default_value = "auto")]
@@ -42,7 +42,7 @@ enum Cmd {
     },
     /// 列出探测到的 harness 数据目录
     Scan,
-    /// 自检路径、grok 二进制与输出目录
+    /// 自检路径、写正文 CLI 与输出目录
     Doctor,
     /// 生成日报
     Report {
@@ -54,7 +54,7 @@ enum Cmd {
         out: Option<PathBuf>,
         #[arg(long)]
         auto: bool,
-        /// 只采集，不调用 grok
+        /// 只采集，不调用写正文 CLI
         #[arg(long)]
         dry_collect: bool,
     },
@@ -295,12 +295,16 @@ fn generate_one(cfg: &Config, date: NaiveDate, auto: bool, dry_collect: bool) ->
         }
         Err(e) => return Err(e).context("调用 agent CLI 写正文失败"),
     };
+    let writer_label = hosts::resolve_host(cfg)
+        .map(|(h, _)| h.label().to_string())
+        .unwrap_or_else(|_| "agent CLI".into());
     let md = render::render(
         date,
         &payload,
         &llm,
         cfg.report.include_audit_log,
         cfg.report.include_stats,
+        &writer_label,
     );
     fs::write(&out_file, md)?;
     println!("[done] {}", out_file.display());

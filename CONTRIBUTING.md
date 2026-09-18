@@ -34,7 +34,7 @@ CI runs the same three steps on Windows, macOS, and Linux.
 ## Design constraints
 
 - **Local-first**: collectors read files only; the only outbound call is the user's own
-  writer CLI (`grok -p`).
+  writer CLI (`grok --prompt-file` / `claude -p` / `codex exec`).
 - **No partial reports**: if the writer fails, no report file is written.
 - **Std-library-leaning**: keep the dependency tree small; justify any new crate.
 

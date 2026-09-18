@@ -15,6 +15,7 @@ within 72 hours.
 ## Scope notes
 
 - harness-daily reads session logs **locally** and never uploads them. The only outbound call is
-  to the user's own `grok` CLI, which receives a per-project prompt digest (not full transcripts).
+  to the user's own writer CLI (Grok, Claude, or Codex), which receives a per-project prompt
+  digest (not full transcripts).
 - Reports may contain sensitive paths or prompt text; users are responsible for where they
   store/publish generated reports.

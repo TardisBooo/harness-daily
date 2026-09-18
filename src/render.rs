@@ -21,6 +21,7 @@ pub fn render(
     llm: &LlmReport,
     include_audit: bool,
     include_stats: bool,
+    writer_label: &str,
 ) -> String {
     let wd = weekday_zh(date);
     let now = Local::now().format("%Y-%m-%d %H:%M:%S");
@@ -36,7 +37,9 @@ pub fn render(
         date.format("%Y-%m-%d"),
         payload.timezone
     ));
-    lines.push(format!("> 生成时间：{now}（harness-daily + Grok Build）"));
+    lines.push(format!(
+        "> 生成时间：{now}（harness-daily · {writer_label}）"
+    ));
     lines.push(String::new());
 
     lines.push("## 一、今日工作总结".into());
@@ -154,4 +157,33 @@ pub fn render(
         lines.push(String::new());
     }
     lines.join("\n")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::CollectPayload;
+    use chrono::NaiveDate;
+
+    #[test]
+    fn footer_uses_writer_host_not_hardcoded_grok() {
+        let payload = CollectPayload {
+            date: "2026-09-17".into(),
+            timezone: "Asia/Shanghai".into(),
+            projects: vec![],
+            stats: vec![],
+            notes: vec![],
+            audit: vec![],
+        };
+        let md = render(
+            NaiveDate::from_ymd_opt(2026, 9, 17).unwrap(),
+            &payload,
+            &LlmReport::default(),
+            false,
+            false,
+            "Claude Code",
+        );
+        assert!(md.contains("harness-daily · Claude Code"));
+        assert!(!md.contains("Grok Build"));
+    }
 }

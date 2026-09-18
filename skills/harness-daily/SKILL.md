@@ -1,17 +1,19 @@
 ---
 name: harness-daily
 description: >
-  汇总本机 Codex / Claude Code / Grok Build / Pi / OMP 的会话，生成企业日报 Markdown。
-  当用户提到日报、工作日志、harness-daily、每天写日报、汇总昨天的工作时使用。
+  通用插件：汇总本机 Codex / Claude Code / Grok Build / Pi / OMP 的会话，生成企业日报 Markdown。
+  可装进 Grok Build、Claude Code、Codex。当用户提到日报、工作日志、harness-daily、每天写日报、汇总昨天的工作时使用。
 argument-hint: "[--date YYYY-MM-DD] [--backfill N]"
 ---
 
 # harness-daily
 
-通用日报插件：采集器是独立 CLI `harness-daily`；写正文使用**当前这套 agent CLI** 的登录态
+这是一套 **Grok / Claude / Codex 通用插件**（同一仓库：`skills/`、`commands/`、`.claude-plugin/`、`plugin.yaml`）。
+采集器是独立 CLI `harness-daily`；写正文使用**当前这套 agent CLI** 的登录态
 （Grok `grok --prompt-file`、Claude `claude -p`、Codex `codex exec`）。不要另配 API key。
 
-操作系统定时任务会自己调 `harness-daily report`。被定时任务拉起的无头 Grok **不要再读本技能、不要改文件、不要调 MCP**，只根据采集 JSON 输出日报 JSON。
+操作系统定时任务会自己调 `harness-daily report`。被定时任务拉起的无头 writer
+（Grok / Claude / Codex）**不要再读本技能、不要改文件、不要调 MCP**，只根据采集 JSON 输出日报 JSON。
 
 ## 生成昨天的日报
 

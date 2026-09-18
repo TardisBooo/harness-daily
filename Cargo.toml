@@ -2,7 +2,7 @@
 name = "harness-daily"
 version = "0.1.0"
 edition = "2021"
-description = "Scan local AI coding harness sessions and write a daily work report via your Grok Build CLI."
+description = "Universal plugin for Grok / Claude / Codex: scan local AI coding harness sessions and write a daily report via the current agent CLI."
 license = "MIT"
 repository = "https://github.com/TardisBooo/harness-daily"
 readme = "README.md"

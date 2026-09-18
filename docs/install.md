@@ -1,8 +1,11 @@
 # Install harness-daily
 
+harness-daily is a **universal plugin** for Grok Build, Claude Code, and Codex. Same GitHub repo,
+same skills/commands, same binary.
+
 This is the same marketplace flow as
 [agent-triforce](https://github.com/ArtemioPadilla/agent-triforce): add the GitHub repo as a
-plugin source, install the plugin, then run setup.
+plugin source, install the plugin in the harness you use, then run setup.
 
 The plugin ships skills and slash commands. The collector is a **native binary**. `/harness-daily:setup`
 downloads that binary, writes config, and registers a daily OS task. Reports do **not** require an

@@ -10,12 +10,12 @@
   "plugins": [
     {
       "name": "harness-daily",
-      "description": "Scan Codex / Claude / Grok / Pi / OMP sessions and write a daily report via the current agent CLI",
+      "description": "Universal plugin: scan Codex / Claude / Grok / Pi / OMP sessions and write a daily report via the current agent CLI",
       "version": "0.1.0",
       "author": { "name": "TardisBooo" },
       "category": "productivity",
       "homepage": "https://github.com/TardisBooo/harness-daily",
-      "keywords": ["daily-report", "codex", "claude", "grok", "pi", "omp"],
+      "keywords": ["daily-report", "universal-plugin", "codex", "claude", "grok", "pi", "omp"],
       "source": "./"
     }
   ]

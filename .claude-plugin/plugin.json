@@ -2,12 +2,12 @@
   "name": "harness-daily",
   "displayName": "harness-daily",
   "version": "0.1.0",
-  "description": "Scan local AI coding harness sessions and write a daily work report via the current agent CLI.",
+  "description": "Universal plugin for Grok Build, Claude Code, and Codex: scan local AI coding harness sessions and write a daily report via the current agent CLI.",
   "author": { "name": "TardisBooo" },
   "homepage": "https://github.com/TardisBooo/harness-daily",
   "repository": "https://github.com/TardisBooo/harness-daily",
   "license": "MIT",
-  "keywords": ["daily-report", "codex", "claude", "grok", "pi", "omp"],
+  "keywords": ["daily-report", "universal-plugin", "codex", "claude", "grok", "pi", "omp"],
   "skills": "./skills/",
   "commands": "./commands/"
 }

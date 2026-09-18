@@ -4,7 +4,7 @@
 
 **一条命令，把昨天的 AI 编码会话变成企业风格的日报 —— 由你已经在用的那套 agent CLI 亲自写。**
 
-_本地扫描 · Grok / Claude / Codex 写正文 · Marketplace 安装 · 无需额外 API Key_
+_通用插件 · 本地扫描 · Grok / Claude / Codex 写正文 · Marketplace 安装 · 无需额外 API Key_
 
 [![CI](https://github.com/TardisBooo/harness-daily/actions/workflows/ci.yml/badge.svg)](https://github.com/TardisBooo/harness-daily/actions/workflows/ci.yml)
 [![Release](https://github.com/TardisBooo/harness-daily/actions/workflows/release.yml/badge.svg)](https://github.com/TardisBooo/harness-daily/actions/workflows/release.yml)
@@ -43,7 +43,8 @@ _本地扫描 · Grok / Claude / Codex 写正文 · Marketplace 安装 · 无需
 
 harness-daily 替你做：
 
-- **本地扫描所有 harness** —— 直接读会话/提问日志；除了交给「你自己的 Grok CLI」的项目摘要外，
+- **通用插件** —— 同一个 GitHub 仓库可装进 **Grok Build / Claude Code / Codex**。技能、斜杠命令、二进制都是一份。
+- **本地扫描所有 harness** —— 直接读会话/提问日志；除了交给「你自己的 Grok / Claude / Codex CLI」的项目摘要外，
   任何数据都不出本机。
 - **正文由当前 agent CLI 撰写** —— Grok Build、Claude Code 或 Codex，用你已有的登录态。不需要第二个 API key。`init --host auto` 按 grok → claude → codex 选用第一套能找到的。
 - **企业日报格式** —— 「今日工作」按项目合并成完整工作条目；原始提问放审计附录，不混进总结。
@@ -62,7 +63,7 @@ harness-daily 替你做：
 | 组件 | 职责 |
 |---|---|
 | `harness-daily`（Rust 二进制） | 发现数据目录、解析会话、按项目聚合、调用写正文 CLI、渲染 Markdown、安装系统定时任务 |
-| 通用插件（`skills/`、`commands/`、`plugin.json`、`.claude-plugin/`、`plugin.yaml`） | 同一仓库可装进 **Grok Build / Claude Code / Codex** |
+| 通用插件（`skills/`、`commands/`、`plugin.json`、`.claude-plugin/`、`.grok-plugin/`、`plugin.yaml`） | 同一仓库可装进 **Grok Build / Claude Code / Codex** |
 | 写正文宿主 | `grok --prompt-file` · `claude -p --output-format json` · `codex exec`（stdin） |
 | 系统调度器 | Windows `schtasks` / macOS `launchd` / Linux cron，每天触发 `report --auto --backfill 7` |
 
@@ -78,7 +79,7 @@ harness-daily 替你做：
 
 ## 📦 安装
 
-推荐走 **plugin marketplace**（和 [agent-triforce](https://github.com/ArtemioPadilla/agent-triforce) 同一套）：把 GitHub 仓库加成市场源，安装插件，再跑 setup。setup 会下载本机二进制、写配置、登记每天 08:00 的系统任务。逐步说明见 [docs/install.zh-CN.md](docs/install.zh-CN.md) · [English](docs/install.md)。
+这是一套 **通用插件**。推荐走 **plugin marketplace**（和 [agent-triforce](https://github.com/ArtemioPadilla/agent-triforce) 同一套）：把 GitHub 仓库加成市场源，在你正在用的那套 harness 里安装插件，再跑 setup。setup 会下载本机二进制、写配置、登记每天 08:00 的系统任务。逐步说明见 [docs/install.zh-CN.md](docs/install.zh-CN.md) · [English](docs/install.md)。
 
 ### Claude Code
 
@@ -159,7 +160,7 @@ harness-daily report --backfill 7 --auto
 ```
 harness-daily init --host auto|grok|claude|codex [--out DIR] [--time 08:00]
 harness-daily scan                                          列出探测到的数据目录
-harness-daily doctor                                        自检（grok 登录、路径、输出目录）
+harness-daily doctor                                        自检（写正文 CLI、路径、输出目录）
 harness-daily report [--date D] [--backfill N] [--auto]
                          [--dry-collect] [--out DIR]        生成日报
 harness-daily schedule install|remove|status|run            管理系统定时任务
@@ -208,7 +209,7 @@ data_dir = ""               # ~/.codex 搬家后在此覆盖
   到配置目录改路径/字段；内置 Rust 适配器在 `src/collect.rs`，欢迎 PR（见
   [`CONTRIBUTING.md`](CONTRIBUTING.md)）。
 - **写正文 CLI**：`--host grok|claude|codex|auto`。采集始终覆盖全部五家 harness。
-- **隐私**：全部本地。只有「项目级提问摘要」会传给你自己的 `grok -p` 进程；审计附录可关闭。
+- **隐私**：全部本地。只有「项目级提问摘要」会传给你自己的写正文 CLI（`grok --prompt-file` / `claude -p` / `codex exec`）；审计附录可关闭。
 
 ## 🛠 开发
 
@@ -219,9 +220,9 @@ cargo fmt --check
 cargo run -- scan           # 用你真实的机器试探测
 ```
 
-目录结构：`src/collect.rs`（各 harness 采集器）· `src/writer.rs`（grok 无头调用与严格 JSON
+目录结构：`src/collect.rs`（各 harness 采集器）· `src/writer.rs`（Grok / Claude / Codex 无头调用与严格 JSON
 恢复）· `src/render.rs`（Markdown 拼装）· `src/schedule.rs`（三平台调度器）· `skills/` +
-`commands/`（Grok 插件）。
+`commands/` + `.claude-plugin/` + `.grok-plugin/` + `plugin.yaml`（通用插件）。
 
 ## 🤝 参与贡献
 

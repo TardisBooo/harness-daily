@@ -4,7 +4,7 @@
 
 **One command turns yesterday's AI coding sessions into an enterprise-style daily report — written by whichever agent CLI you already use.**
 
-_Scan locally · Write with Grok / Claude / Codex · Marketplace install · No extra API keys_
+_Universal plugin · Scan locally · Write with Grok / Claude / Codex · Marketplace install · No extra API keys_
 
 [![CI](https://github.com/TardisBooo/harness-daily/actions/workflows/ci.yml/badge.svg)](https://github.com/TardisBooo/harness-daily/actions/workflows/ci.yml)
 [![Release](https://github.com/TardisBooo/harness-daily/actions/workflows/release.yml/badge.svg)](https://github.com/TardisBooo/harness-daily/actions/workflows/release.yml)
@@ -44,8 +44,10 @@ digging through histories by hand.
 
 harness-daily does it for you:
 
+- **Universal plugin** — one GitHub repo installs into **Grok Build**, **Claude Code**, or
+  **Codex**. Same skills, same slash commands, same binary.
 - **Scans every harness locally** — reads session/prompt logs from disk; nothing leaves your machine
-  except the distilled prompts you choose to send to your own Grok Build CLI.
+  except the distilled prompts you choose to send to **your own** Grok / Claude / Codex CLI.
 - **Writes the prose with your current agent CLI** — Grok Build, Claude Code, or Codex, using
   the login you already have. No second API key. `init --host auto` picks the first one found.
 - **Enterprise-report format** — "today's work" grouped by project with merged work items; raw
@@ -66,7 +68,7 @@ harness-daily does it for you:
 | Piece | Responsibility |
 |---|---|
 | `harness-daily` (Rust binary) | Discover harness data dirs, parse session logs, aggregate prompts per project, call the writer CLI, render Markdown, install the OS schedule |
-| Universal plugin (`skills/`, `commands/`, `plugin.json`, `.claude-plugin/`, `plugin.yaml`) | Same repo installs into **Grok Build**, **Claude Code**, or **Codex** |
+| Universal plugin (`skills/`, `commands/`, `plugin.json`, `.claude-plugin/`, `.grok-plugin/`, `plugin.yaml`) | Same repo installs into **Grok Build**, **Claude Code**, or **Codex** |
 | Writer host | `grok --prompt-file` · `claude -p --output-format json` · `codex exec` (stdin) |
 | OS scheduler | Windows `schtasks` / macOS `launchd` / Linux cron — fires `report --auto --backfill 7` daily |
 
@@ -82,11 +84,11 @@ covered automatically. Moved a data dir? Point `[harnesses.<id>].data_dir` at th
 
 ## 📦 Install
 
-Recommended path is the **plugin marketplace** (same idea as
+This is a **universal plugin**. Recommended path is the **plugin marketplace** (same idea as
 [agent-triforce](https://github.com/ArtemioPadilla/agent-triforce)): add the GitHub repo as a
-source, install the plugin, then run setup. Setup downloads the native binary, writes config, and
-registers the 08:00 OS task. Step-by-step: [docs/install.md](docs/install.md) ·
-[中文安装教程](docs/install.zh-CN.md).
+source, install the plugin in whichever harness you use, then run setup. Setup downloads the
+native binary, writes config, and registers the 08:00 OS task. Step-by-step:
+[docs/install.md](docs/install.md) · [中文安装教程](docs/install.zh-CN.md).
 
 ### Claude Code
 
@@ -168,7 +170,7 @@ harness-daily report --backfill 7 --auto
 ```
 harness-daily init --host auto|grok|claude|codex [--out DIR] [--time 08:00]
 harness-daily scan                                          list detected harness data roots
-harness-daily doctor                                        self-check grok login, paths, output dir
+harness-daily doctor                                        self-check writer CLI, paths, output dir
 harness-daily report [--date D] [--backfill N] [--auto]
                          [--dry-collect] [--out DIR]        generate report(s)
 harness-daily schedule install|remove|status|run            manage the OS scheduled task
@@ -219,7 +221,7 @@ data_dir = ""               # override if you moved ~/.codex
   PRs welcome (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
 - **Writer CLI**: `--host grok|claude|codex|auto`. Collection always covers all five harnesses.
 - **Privacy**: everything is local. Only the per-project prompt digest is passed to your own
-  `grok -p` process; the audit appendix can be disabled.
+  writer CLI (`grok --prompt-file` / `claude -p` / `codex exec`); the audit appendix can be disabled.
 
 ## 🛠 Development
 
@@ -230,9 +232,10 @@ cargo fmt --check
 cargo run -- scan           # try discovery against your real machine
 ```
 
-Repository layout: `src/collect.rs` (per-harness collectors) · `src/writer.rs` (grok headless
-invocation + strict-JSON recovery) · `src/render.rs` (Markdown assembly) · `src/schedule.rs`
-(Windows/macOS/Linux schedulers) · `skills/` + `commands/` (Grok plugin).
+Repository layout: `src/collect.rs` (per-harness collectors) · `src/writer.rs` (Grok / Claude /
+Codex headless invocation + strict-JSON recovery) · `src/render.rs` (Markdown assembly) ·
+`src/schedule.rs` (Windows/macOS/Linux schedulers) · `skills/` + `commands/` + `.claude-plugin/`
++ `.grok-plugin/` + `plugin.yaml` (universal plugin).
 
 ## 🤝 Contributing
 
