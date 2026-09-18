@@ -28,11 +28,21 @@ pub fn install(cfg: &Config) -> Result<()> {
     let time = cfg.report_time.clone();
     #[cfg(windows)]
     {
-        let tr = format!(
-            "\"{}\" report --auto --backfill {}",
-            exe.display(),
-            cfg.backfill_days
+        let dest_dir = exe
+            .parent()
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("."));
+        std::fs::create_dir_all(&dest_dir)?;
+        let wrapper = dest_dir.join("run-report.cmd");
+        let log = dest_dir.join("task.log");
+        let wrapper_body = format!(
+            "@echo off\r\necho ===== %DATE% %TIME% =====>>\"{log}\"\r\n\"{exe}\" report --auto --backfill {n} >>\"{log}\" 2>&1\r\n",
+            log = log.display(),
+            exe = exe.display(),
+            n = cfg.backfill_days
         );
+        std::fs::write(&wrapper, wrapper_body)?;
+        let tr = format!("\"{}\"", wrapper.display());
         let status = Command::new("schtasks")
             .args([
                 "/Create", "/TN", TASK_NAME, "/TR", &tr, "/SC", "DAILY", "/ST", &time, "/F",
@@ -42,7 +52,18 @@ pub fn install(cfg: &Config) -> Result<()> {
         if !status.success() {
             anyhow::bail!("schtasks /Create 失败");
         }
+        // Default schtasks /Create stops on battery and does not catch up a missed 08:00.
+        let ps = format!(
+            "$t = Get-ScheduledTask -TaskName '{TASK_NAME}'; $t.Settings.DisallowStartIfOnBatteries = $false; $t.Settings.StopIfGoingOnBatteries = $false; $t.Settings.StartWhenAvailable = $true; $t.Settings.ExecutionTimeLimit = 'PT2H'; Set-ScheduledTask -InputObject $t | Out-Null"
+        );
+        let patched = Command::new("powershell")
+            .args(["-NoProfile", "-Command", &ps])
+            .status();
+        if !matches!(patched, Ok(s) if s.success()) {
+            eprintln!("warning: 未能关闭计划任务的「电池上停止」；笔记本未插电时 08:00 可能被跳过");
+        }
         println!("已安装 Windows 计划任务 {TASK_NAME}（每天 {}）", time);
+        println!("任务日志 {}", log.display());
         Ok(())
     }
     #[cfg(target_os = "macos")]

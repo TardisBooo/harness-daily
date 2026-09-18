@@ -11,6 +11,8 @@ argument-hint: "[--date YYYY-MM-DD] [--backfill N]"
 通用日报插件：采集器是独立 CLI `harness-daily`；写正文使用**当前这套 agent CLI** 的登录态
 （Grok `grok --prompt-file`、Claude `claude -p`、Codex `codex exec`）。不要另配 API key。
 
+操作系统定时任务会自己调 `harness-daily report`。被定时任务拉起的无头 Grok **不要再读本技能、不要改文件、不要调 MCP**，只根据采集 JSON 输出日报 JSON。
+
 ## 生成昨天的日报
 
 ```bash

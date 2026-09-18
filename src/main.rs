@@ -12,6 +12,7 @@ use anyhow::{Context, Result};
 use chrono::{Local, NaiveDate};
 use clap::{Parser, Subcommand};
 use config::{ensure_dir, Config};
+use model::LlmReport;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -222,10 +223,39 @@ fn cmd_report(
         vec![today - chrono::Duration::days(1)]
     };
 
+    let mut failed = Vec::new();
     for d in dates {
-        generate_one(&cfg, d, auto, dry_collect)?;
+        if let Err(e) = generate_one(&cfg, d, auto, dry_collect) {
+            append_run_log(&cfg, &format!("[{d}] FAIL {e:#}"));
+            if auto {
+                eprintln!("[fail] {d}: {e:#}");
+                failed.push(d);
+                continue;
+            }
+            return Err(e);
+        }
+    }
+    if !failed.is_empty() {
+        anyhow::bail!(
+            "有 {} 天未写出：{}",
+            failed.len(),
+            failed
+                .iter()
+                .map(|d| d.to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
     }
     Ok(())
+}
+
+fn append_run_log(cfg: &Config, line: &str) {
+    use std::io::Write;
+    let path = cfg.output_dir.join(".harness-daily-run.log");
+    if let Ok(mut f) = fs::OpenOptions::new().create(true).append(true).open(&path) {
+        let ts = Local::now().format("%Y-%m-%d %H:%M:%S");
+        let _ = writeln!(f, "{ts} {line}");
+    }
 }
 
 fn generate_one(cfg: &Config, date: NaiveDate, auto: bool, dry_collect: bool) -> Result<()> {
@@ -234,9 +264,11 @@ fn generate_one(cfg: &Config, date: NaiveDate, auto: bool, dry_collect: bool) ->
         .join(format!("日报-{}.md", date.format("%Y-%m-%d")));
     if auto && out_file.exists() {
         println!("[skip] {} 已存在", out_file.display());
+        append_run_log(cfg, &format!("[{date}] skip {}", out_file.display()));
         return Ok(());
     }
     println!("[collect] {}", date);
+    append_run_log(cfg, &format!("[{date}] collect"));
     let payload = collect::collect(cfg, date)?;
     for s in &payload.stats {
         println!(
@@ -254,7 +286,15 @@ fn generate_one(cfg: &Config, date: NaiveDate, auto: bool, dry_collect: bool) ->
         return Ok(());
     }
     let work = cfg.output_dir.join(".harness-daily-work");
-    let llm = writer::write_report(cfg, &payload, &work).context("调用 agent CLI 写正文失败")?;
+    let llm = match writer::write_report(cfg, &payload, &work) {
+        Ok(r) => r,
+        Err(e) if auto => {
+            append_run_log(cfg, &format!("[{date}] writer fallback: {e:#}"));
+            eprintln!("[warn] {date}: 写正文失败，改用采集摘要：{e:#}");
+            LlmReport::default()
+        }
+        Err(e) => return Err(e).context("调用 agent CLI 写正文失败"),
+    };
     let md = render::render(
         date,
         &payload,
@@ -264,5 +304,6 @@ fn generate_one(cfg: &Config, date: NaiveDate, auto: bool, dry_collect: bool) ->
     );
     fs::write(&out_file, md)?;
     println!("[done] {}", out_file.display());
+    append_run_log(cfg, &format!("[{date}] done {}", out_file.display()));
     Ok(())
 }

@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Scheduled Grok writer no longer injects the harness-daily skill / MCP tools
+  (max-turns cancel left 日报-YYYY-MM-DD.md unwritten). Headless call is
+  tool-restricted, logs writer stdout/stderr, and Windows schtasks now runs on
+  battery, starts when available, and appends `task.log`.
+- `--auto --backfill` continues remaining dates if one day fails.
+
 ### Added
 
 - Universal writer hosts: `--host auto|grok|claude|codex` (`grok --prompt-file`,

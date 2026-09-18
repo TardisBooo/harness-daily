@@ -16,9 +16,21 @@ pub fn write_report(cfg: &Config, payload: &CollectPayload, work_dir: &Path) -> 
 
     let (host, bin) = hosts::resolve_host(cfg)?;
     let prompt = fs::read_to_string(&prompt_path)?;
-    let output = run_host(host, &bin, &cfg.writer.args_extra, &prompt, &prompt_path)?;
+    let output = run_host(
+        host,
+        &bin,
+        &cfg.writer.args_extra,
+        &prompt,
+        &prompt_path,
+        work_dir,
+    )?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
+    let _ = fs::write(
+        work_dir.join("writer-stdout.json"),
+        output.stdout.as_slice(),
+    );
+    let _ = fs::write(work_dir.join("writer-stderr.txt"), output.stderr.as_slice());
     if !output.status.success() {
         anyhow::bail!(
             "{} 退出码 {:?} stderr={} stdout={}",
@@ -45,18 +57,32 @@ fn run_host(
     extra: &[String],
     prompt: &str,
     prompt_path: &Path,
+    work_dir: &Path,
 ) -> Result<std::process::Output> {
     let mut cmd = Command::new(bin);
     match host {
         Host::Grok => {
-            cmd.arg("--prompt-file")
+            // Scheduled writer used to hit max-turns: the prompt mentioned 日报,
+            // Grok injected this plugin skill plus TinyFish MCP, then cancelled.
+            // Deny all tools (MCP included). Deny wins over --always-approve.
+            cmd.env("GROK_MEMORY", "0")
+                .env("GROK_DISABLE_AUTOUPDATER", "1")
+                .env("GROK_AGENT_DASHBOARD", "0")
+                .arg("--prompt-file")
                 .arg(prompt_path)
                 .arg("--output-format")
                 .arg("json")
                 .arg("--max-turns")
-                .arg("4")
+                .arg("2")
+                .arg("--no-subagents")
+                .arg("--disable-web-search")
+                .arg("--no-auto-update")
+                .arg("--cwd")
+                .arg(work_dir)
                 .arg("--disallowed-tools")
-                .arg("run_terminal_cmd,search_replace,web_search,read_file");
+                .arg("Agent")
+                .arg("--deny")
+                .arg("*");
             for e in extra {
                 cmd.arg(e);
             }
@@ -126,9 +152,7 @@ fn slim_payload(payload: &CollectPayload) -> serde_json::Value {
 fn build_prompt(payload: &CollectPayload) -> String {
     let body = serde_json::to_string_pretty(&slim_payload(payload)).unwrap_or_else(|_| "{}".into());
     format!(
-        r#"你是工作日报撰写助手。下面 JSON 是当日从本机各 AI coding harness 采集的用户提问（已按项目聚合）。
-
-请只根据这些材料，用中文企业日报口吻归纳「做了什么」，不要编造未出现的工作。
+        r#"根据下面采集 JSON，用中文归纳各项目当天做了什么。不要编造未出现的工作。不要读文件、不要改文件、不要调用工具。
 
 硬性要求：
 1. 按项目组织工作内容，不要写工具名、时间、轮数。
@@ -218,5 +242,24 @@ mod tests {
         let s = serde_json::json!({"text": inner, "stopReason": "end_turn"}).to_string();
         let r = parse_llm_json(&s).unwrap();
         assert_eq!(r.projects[0].name, "MyDesk");
+    }
+
+    #[test]
+    fn writer_prompt_does_not_mention_daily_report_skill_triggers() {
+        let payload = CollectPayload {
+            date: "2026-09-17".into(),
+            timezone: "Asia/Shanghai".into(),
+            projects: vec![],
+            stats: vec![],
+            notes: vec![],
+            audit: vec![],
+        };
+        let p = build_prompt(&payload);
+        for needle in ["日报", "工作日志", "harness-daily"] {
+            assert!(
+                !p.contains(needle),
+                "scheduled writer prompt must not inject the plugin skill; found {needle}"
+            );
+        }
     }
 }
